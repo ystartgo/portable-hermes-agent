@@ -60,6 +60,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "sidebar.loading_model": "Loading model...",
         "sidebar.model_loaded": "Model loaded",
         "sidebar.load_failed": "Failed to load: {error}",
+        "sidebar.add_custom_model": "+ Add Custom Model...",
+        "sidebar.custom_model_prompt": "Enter model ID (e.g. auto, claude-3-7-sonnet, deepseek-chat):",
 
         # Chat Area
         "chat.new_chat_title": "New Chat",
@@ -113,7 +115,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "settings.tab_model": "  Model  ",
         "settings.language": "Interface Language",
         "settings.default_model": "Default Model",
-        "settings.model_hint": "You can type any OpenRouter model ID",
+        "settings.model_hint": "Select or type any model ID (e.g. 'auto' for TokenTable, claude-3-7-sonnet, deepseek-chat)",
+        "settings.add_custom_model": "Add Custom Model",
+        "settings.add_model_btn": "+ Add to List",
+        "settings.model_added": "Model '{name}' added and selected.",
         "settings.save": "Save & Close",
 
         # Skills Browser
@@ -237,6 +242,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "sidebar.loading_model": "正在載入模型...",
         "sidebar.model_loaded": "模型載入成功",
         "sidebar.load_failed": "載入失敗: {error}",
+        "sidebar.add_custom_model": "+ 自訂模型...",
+        "sidebar.custom_model_prompt": "請輸入模型 ID（例如：auto、claude-3-7-sonnet、deepseek-chat）：",
 
         # Chat Area
         "chat.new_chat_title": "新對話",
@@ -289,7 +296,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "settings.tab_model": "  模型設定  ",
         "settings.language": "介面語言",
         "settings.default_model": "預設模型",
-        "settings.model_hint": "您可以輸入任何 OpenRouter 模型 ID",
+        "settings.model_hint": "可選取或輸入任意模型 ID（例如 TokenTable 的 auto、claude-3-7-sonnet、deepseek-chat 等）",
+        "settings.add_custom_model": "手動新增自訂模型",
+        "settings.add_model_btn": "+ 新增至清單",
+        "settings.model_added": "已成功新增並選取模型「{name}」",
         "settings.save": "儲存並關閉",
 
         # Skills Browser
@@ -413,6 +423,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "sidebar.loading_model": "正在加载模型...",
         "sidebar.model_loaded": "模型加载成功",
         "sidebar.load_failed": "加载失败: {error}",
+        "sidebar.add_custom_model": "+ 自订模型...",
+        "sidebar.custom_model_prompt": "请输入模型 ID（例如：auto、claude-3-7-sonnet、deepseek-chat）：",
 
         # Chat Area
         "chat.new_chat_title": "新建对话",
@@ -465,7 +477,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "settings.tab_model": "  模型设置  ",
         "settings.language": "界面语言",
         "settings.default_model": "默认模型",
-        "settings.model_hint": "您可以输入任何 OpenRouter 模型 ID",
+        "settings.model_hint": "可选或输入任意模型 ID（例如 TokenTable 的 auto、claude-3-7-sonnet、deepseek-chat 等）",
+        "settings.add_custom_model": "手动新增自订模型",
+        "settings.add_model_btn": "+ 新增至列表",
+        "settings.model_added": "已成功新增并选择模型「{name}」",
         "settings.save": "保存并关闭",
 
         # Skills Browser

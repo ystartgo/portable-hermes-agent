@@ -7,6 +7,7 @@ import os
 import sys
 import re
 import io
+import json
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import threading
@@ -314,6 +315,37 @@ class StreamingBubble(tk.Frame):
             pass
 
 
+def get_custom_models() -> List[str]:
+    """Load user-defined custom model IDs."""
+    path = get_hermes_home() / "custom_models.json"
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return [str(m).strip() for m in data if str(m).strip()]
+        except Exception:
+            pass
+    return []
+
+
+def add_custom_model(model_id: str) -> bool:
+    """Add a custom model ID and persist it."""
+    model_id = model_id.strip()
+    if not model_id:
+        return False
+    models = get_custom_models()
+    if model_id not in models:
+        models.append(model_id)
+        path = get_hermes_home() / "custom_models.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            path.write_text(json.dumps(models, ensure_ascii=False, indent=2), encoding="utf-8")
+            return True
+        except Exception:
+            pass
+    return False
+
+
 # ============================================================================
 # Sidebar
 # ============================================================================
@@ -321,7 +353,8 @@ class StreamingBubble(tk.Frame):
 class Sidebar(tk.Frame):
     """Left sidebar with branding, new-chat, session history, and model switcher."""
 
-    MODELS = [
+    BASE_MODELS = [
+        ("auto", "Auto", "TokenTable / Default routing"),
         ("google/gemini-2.5-flash", "Gemini Flash", "Fast & cheap"),
         ("google/gemini-2.5-pro", "Gemini Pro", "Smart & affordable"),
         ("anthropic/claude-sonnet-4", "Claude Sonnet", "Great all-rounder"),
@@ -331,6 +364,16 @@ class Sidebar(tk.Frame):
         ("deepseek/deepseek-chat-v3", "DeepSeek V3", "Strong & cheap"),
         ("meta-llama/llama-4-maverick", "Llama Maverick", "Open source"),
     ]
+    MODELS = BASE_MODELS
+
+    def _get_unified_models(self) -> List[tuple]:
+        """Combine base models, custom user models, and local LM Studio models."""
+        base_ids = {m[0] for m in self.BASE_MODELS}
+        customs = []
+        for mid in get_custom_models():
+            if mid not in base_ids:
+                customs.append((mid, mid, "Custom"))
+        return list(self.BASE_MODELS) + customs + list(self._lm_studio_models)
 
     def __init__(self, parent, on_new=None, on_model_change=None,
                  on_session_select=None, on_local_models=None,
@@ -345,9 +388,9 @@ class Sidebar(tk.Frame):
         self._confirm_delete = True  # Show confirmation dialog
         self._loading_model = False  # True while auto-loading
 
-        # Unified model list: cloud + local
+        # Unified model list: cloud + local + custom
         self._lm_studio_models: List[tuple] = []  # [(id, name, note), ...]
-        self._all_models: List[tuple] = list(self.MODELS)
+        self._all_models: List[tuple] = self._get_unified_models()
         self._model_states: Dict[str, str] = {}  # model_id -> "loaded"/"not-loaded"
 
         # -- Logo --
@@ -373,8 +416,9 @@ class Sidebar(tk.Frame):
                                   fg=C["text_hint"], bg=C["bg_sidebar"])
         self.model_lbl.pack(anchor="w")
 
-        self.model_var = tk.StringVar(value="google/gemini-2.5-flash")
+        self.model_var = tk.StringVar(value="auto")
         display_values = [self._display_name(m) for m in self._all_models]
+        display_values.append(t("sidebar.add_custom_model", "+ 自訂模型..."))
         self.model_combo = ttk.Combobox(model_fr, textvariable=tk.StringVar(),
                                         values=display_values,
                                         font=FONTS["small"], state="readonly")
@@ -442,6 +486,13 @@ class Sidebar(tk.Frame):
             if mid == model_id:
                 self.model_combo.current(i)
                 return
+        if model_id and model_id != t("sidebar.add_custom_model", "+ 自訂模型..."):
+            self._all_models.append((model_id, model_id, "Custom"))
+            display_values = [self._display_name(m) for m in self._all_models]
+            display_values.append(t("sidebar.add_custom_model", "+ 自訂模型..."))
+            self.model_combo["values"] = display_values
+            self.model_combo.current(len(self._all_models) - 1)
+            return
         self.model_combo.set(model_id)
 
     def set_model(self, name):
@@ -451,9 +502,17 @@ class Sidebar(tk.Frame):
     def _update_combobox_values(self):
         """Rebuild combobox values from _all_models (must be called on main thread)."""
         current = self.model_var.get()
+        self._all_models = self._get_unified_models()
         display_values = [self._display_name(m) for m in self._all_models]
+        display_values.append(t("sidebar.add_custom_model", "+ 自訂模型..."))
         self.model_combo["values"] = display_values
         self._select_model_in_combo(current)
+
+    def refresh_model_list(self, selected=None):
+        """Force refresh of model combobox including any newly added custom models."""
+        self._update_combobox_values()
+        if selected:
+            self.set_model(selected)
 
     def _build_local_settings(self, parent):
         """Build the compact local model settings panel."""
@@ -641,7 +700,7 @@ class Sidebar(tk.Frame):
                 pass
             self._lm_studio_models = local_models
             self._model_states = states
-            self._all_models = list(self.MODELS) + local_models
+            self._all_models = self._get_unified_models()
             # Register local model IDs with the bridge for routing
             if self.on_local_models and local_models:
                 local_ids = [mid for mid, _, _ in local_models]
@@ -663,6 +722,22 @@ class Sidebar(tk.Frame):
 
     def _on_model_selected(self, event):
         idx = self.model_combo.current()
+        if idx == len(self._all_models):
+            # User selected "+ 自訂模型..."
+            title = t("sidebar.add_custom_model", "+ 自訂模型...")
+            prompt = t("sidebar.custom_model_prompt", "請輸入模型 ID（例如：auto、claude-3-7-sonnet、deepseek-chat）：")
+            new_model = simpledialog.askstring(title, prompt, parent=self.winfo_toplevel())
+            if new_model and new_model.strip():
+                new_model = new_model.strip()
+                add_custom_model(new_model)
+                self.model_var.set(new_model)
+                self._update_combobox_values()
+                if self.on_model_change:
+                    self.on_model_change(new_model)
+            else:
+                self._select_model_in_combo(self.model_var.get())
+            return
+
         if 0 <= idx < len(self._all_models):
             model_id = self._all_models[idx][0]
             self.model_var.set(model_id)
@@ -1032,26 +1107,63 @@ class SettingsDialog(tk.Toplevel):
 
     def _build_model(self, parent):
         tk.Label(parent, text=t("settings.default_model", "Default Model"), font=FONTS["small"],
-                fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w")
+                fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w", pady=(2, 0))
 
-        models = [
-            "google/gemini-2.5-flash",
-            "google/gemini-2.5-pro",
-            "anthropic/claude-sonnet-4",
-            "anthropic/claude-opus-4.6",
-            "openai/gpt-4o",
-            "openai/gpt-4o-mini",
-            "openai/o3-mini",
-            "meta-llama/llama-4-maverick",
-            "deepseek/deepseek-chat-v3",
-            "qwen/qwen3-235b-a22b",
-        ]
-        self.model_var = tk.StringVar(value="google/gemini-2.5-flash")
+        base_ids = [m[0] for m in Sidebar.BASE_MODELS]
+        custom_ids = [m for m in get_custom_models() if m not in base_ids]
+        models = base_ids + custom_ids
+
+        cur_model = self.bridge.get_model() if self.bridge else "auto"
+        if cur_model not in models:
+            models.insert(0, cur_model)
+
+        self.model_var = tk.StringVar(value=cur_model)
         self.model_combo = ttk.Combobox(parent, textvariable=self.model_var,
                                         values=models, font=FONTS["mono_small"])
-        self.model_combo.pack(fill="x", pady=(4, 12))
-        tk.Label(parent, text=t("settings.model_hint", "You can type any OpenRouter model ID"),
-                font=SF("Segoe UI", 8), fg=C["text_disabled"], bg=C["bg_main"]).pack(anchor="w")
+        self.model_combo.pack(fill="x", pady=(4, 6))
+
+        tk.Label(parent, text=t("settings.model_hint", "可選取或輸入任意模型 ID（例如 TokenTable 的 auto、claude-3-7-sonnet、deepseek-chat 等）"),
+                font=SF("Segoe UI", 8), fg=C["text_disabled"], bg=C["bg_main"], wraplength=500, justify="left").pack(anchor="w", pady=(0, 14))
+
+        # Add custom model frame
+        add_frame = tk.LabelFrame(parent, text=t("settings.add_custom_model", "手動新增自訂模型"),
+                                  font=FONTS["small"], fg=C["accent"], bg=C["bg_main"],
+                                  padx=10, pady=8)
+        add_frame.pack(fill="x", pady=(0, 10))
+
+        input_row = tk.Frame(add_frame, bg=C["bg_main"])
+        input_row.pack(fill="x", pady=(2, 4))
+
+        self.custom_model_entry = tk.Entry(input_row, font=FONTS["mono_small"],
+                                           bg=C["bg_input"], fg=C["text_primary"],
+                                           insertbackground=C["text_primary"],
+                                           relief="flat")
+        self.custom_model_entry.pack(side="left", fill="x", expand=True, ipady=4, padx=(0, 8))
+
+        def _do_add_model():
+            new_id = self.custom_model_entry.get().strip()
+            if not new_id:
+                return
+            add_custom_model(new_id)
+            vals = list(self.model_combo["values"])
+            if new_id not in vals:
+                vals.append(new_id)
+                self.model_combo["values"] = vals
+            self.model_var.set(new_id)
+            self.custom_model_entry.delete(0, "end")
+            self.model_status_lbl.configure(
+                text=t("settings.model_added", "已新增並選取模型「{name}」", name=new_id),
+                fg=C["success"]
+            )
+
+        add_btn = ttk.Button(input_row, text=t("settings.add_model_btn", "+ 新增至清單"),
+                             style="Small.TButton", command=_do_add_model)
+        add_btn.pack(side="right")
+        self.custom_model_entry.bind("<Return>", lambda e: _do_add_model())
+
+        self.model_status_lbl = tk.Label(add_frame, text="", font=SF("Segoe UI", 8),
+                                         bg=C["bg_main"])
+        self.model_status_lbl.pack(anchor="w")
 
     def _save(self):
         # Save language
@@ -1107,7 +1219,22 @@ class SettingsDialog(tk.Toplevel):
                         content += f"\nCUSTOM_API_KEY={val}\n"
         model = self.model_var.get().strip()
         if model:
-            self.bridge.set_model(model)
+            add_custom_model(model)
+            if self.bridge:
+                self.bridge.set_model(model)
+            try:
+                from hermes_cli.config import load_config, save_config
+                cfg = load_config()
+                if "model" not in cfg or not isinstance(cfg["model"], dict):
+                    cfg["model"] = {}
+                cfg["model"]["default"] = model
+                save_config(cfg)
+            except Exception:
+                pass
+            if hasattr(self.master, "sidebar"):
+                self.master.sidebar.refresh_model_list(selected=model)
+            if hasattr(self.master, "status_bar"):
+                self.master.status_bar.set_model(model)
         env_path.write_text(content, encoding="utf-8")
         self.destroy()
 
@@ -1796,6 +1923,18 @@ class HermesGUI:
                 self.bridge.set_model(model_id)
         else:
             self.bridge.set_model(model_id)
+
+        # Persist selected model to config.yaml as default
+        try:
+            from hermes_cli.config import load_config, save_config
+            cfg = load_config()
+            if "model" not in cfg or not isinstance(cfg["model"], dict):
+                cfg["model"] = {}
+            cfg["model"]["default"] = model_id
+            save_config(cfg)
+        except Exception:
+            pass
+
         # Show friendly name in status bar
         display = model_id
         for mid, name, note in self.sidebar._all_models:
