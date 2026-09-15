@@ -74,10 +74,12 @@ def apply_windows_utf8_bootstrap() -> bool:
         return False
 
     # 1. Child processes inherit these and run in UTF-8 mode.
-    #    We use setdefault() rather than overwriting so the user can
-    #    explicitly opt out by setting PYTHONUTF8=0 in their environment
-    #    (or PYTHONIOENCODING=something-else) if they really want to.
-    os.environ.setdefault("PYTHONUTF8", "1")
+    #    Force PYTHONUTF8=1 unconditionally (not setdefault) — on CJK-locale
+    #    Windows (CP950 Big5 / CP936 GBK / CP932 Shift-JIS), any open() call
+    #    without explicit encoding raises UnicodeDecodeError on UTF-8 files.
+    #    Users who need a different encoding can override PYTHONIOENCODING only
+    #    (stdio); PYTHONUTF8 must stay 1 for open() to work on UTF-8 files.
+    os.environ["PYTHONUTF8"] = "1"
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
     # 2. Reconfigure the current process's stdio to UTF-8.  Needed

@@ -22,7 +22,8 @@ set "PYTHONPATH=%PYTHON_DIR%\Lib\site-packages"
 set "HERMES_PYTHON=%PYTHON_EXE%"
 set "HERMES_ROOT=%SCRIPT_DIR%"
 
-:: Encoding and Tcl/Tk
+:: Encoding and Tcl/Tk (force UTF-8 for ALL file I/O — fixes cp950/Big5 errors on TW Windows)
+set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
 set "TCL_LIBRARY=%PYTHON_DIR%\tcl\tcl8.6"
 set "TK_LIBRARY=%PYTHON_DIR%\tcl\tk8.6"
@@ -33,7 +34,7 @@ set "TERMINAL_CWD=%SCRIPT_DIR%"
 :: Launch Hermes GUI
 cd /d "%SCRIPT_DIR%"
 chcp 65001 >nul 2>&1
-"%PYTHON_EXE%" -c "from gui.app import main; main()" %*
+"%PYTHON_EXE%" -X utf8 -c "from gui.app import main; main()" %*
 
 if errorlevel 1 (
     echo.

@@ -5,6 +5,21 @@ Pure tkinter + ttk, dark theme, flat design.
 """
 import os
 import sys
+
+# ── UTF-8 mode: must happen before ANY file I/O or imports that open files ──
+# Windows systems with a CJK locale (CP950 Big5, CP936 GBK, …) default
+# open() to that code page. Any UTF-8 encoded file (README.md, config YAML,
+# Python source) immediately raises UnicodeDecodeError. Force UTF-8 mode
+# for the whole process so open() behaves identically to Linux/macOS.
+os.environ["PYTHONUTF8"] = "1"
+os.environ["PYTHONIOENCODING"] = "utf-8"
+if sys.version_info >= (3, 7):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
+
 import re
 import io
 import json
