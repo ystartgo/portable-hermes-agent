@@ -1,7 +1,9 @@
-<p align="right">
-  <a href="README.md">English</a> |
-  <a href="README.zh-TW.md">繁體中文</a> |
-  <a href="README.zh-CN.md"><strong>简体中文</strong></a>
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/Lang-English-blue?style=for-the-badge" alt="English"></a>
+  <a href="README.zh-TW.md"><img src="https://img.shields.io/badge/Lang-%E7%B9%81%E9%AB%94%E4%B8%AD%E6%96%87-purple?style=for-the-badge" alt="繁體中文"></a>
+  <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/Lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red?style=for-the-badge" alt="简体中文"></a>
+  <a href="README.es.md"><img src="https://img.shields.io/badge/Lang-Espa%C3%B1ol-yellow?style=for-the-badge" alt="Español"></a>
+  <a href="README.ur-pk.md"><img src="https://img.shields.io/badge/Lang-%D8%A7%D8%B1%D8%AF%D9%88-green?style=for-the-badge" alt="اردو"></a>
 </p>
 
 # 便携版 Hermes Agent (Portable Hermes Agent)
