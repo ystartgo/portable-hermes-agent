@@ -56,7 +56,7 @@ def get_api_services():
                 "icon": "LLM",
                 "what": "AI 大模型聚合平台，支援 300+ 主流模型（Claude、GPT、Gemini 等），固定費率且免翻牆。",
                 "unlocks": "對話聊天、深度推理、OpenAI 相容高速通道",
-                "signup_url": "https://tokentable.asia",
+                "signup_url": "https://top.yia.app/token",
                 "recommend_url": "https://top.yia.app/token",
                 "recommend_label": "推薦申請 TokenTable API Key（開啟 top.yia.app/token）",
                 "base_url": "https://tokentable.asia/v1",
@@ -179,7 +179,7 @@ def get_api_services():
                 "icon": "LLM",
                 "what": "AI 大模型聚合平台，支持 300+ 主流模型（Claude、GPT、Gemini 等），固定费率且免翻墙。",
                 "unlocks": "对话聊天、深度推理、OpenAI 兼容高速通道",
-                "signup_url": "https://tokentable.asia",
+                "signup_url": "https://top.yia.app/token",
                 "recommend_url": "https://top.yia.app/token",
                 "recommend_label": "推荐申请 TokenTable API Key（打开 top.yia.app/token）",
                 "base_url": "https://tokentable.asia/v1",
@@ -302,7 +302,7 @@ def get_api_services():
                 "icon": "LLM",
                 "what": "Unified AI Model Gateway — 300+ top models with flat pricing and OpenAI compatibility.",
                 "unlocks": "Chat, deep reasoning, OpenAI compatible high-speed endpoints",
-                "signup_url": "https://tokentable.asia",
+                "signup_url": "https://top.yia.app/token",
                 "recommend_url": "https://top.yia.app/token",
                 "recommend_label": "Recommended: Get TokenTable Key (top.yia.app/token)",
                 "base_url": "https://tokentable.asia/v1",
@@ -649,24 +649,12 @@ class APISetupWizard(tk.Toplevel):
 
         rec_url = svc.get("recommend_url") or svc["signup_url"]
         rec_label = svc.get("recommend_label", f"前往申請 {svc['name']} 金鑰")
-        has_two_btns = bool(svc.get("signup_url") and svc.get("signup_url") != rec_url)
 
         rec_btn = ttk.Button(btn_frame, text=f"👉 {rec_label}",
                              style="Primary.TButton",
                              command=lambda u=rec_url: webbrowser.open(u))
+        rec_btn.pack(fill="x")
         Tooltip(rec_btn, f"在瀏覽器中開啟 {rec_url}")
-
-        if has_two_btns:
-            rec_btn.pack(side="left", fill="x", expand=True, padx=(0, 4))
-            site_url = svc["signup_url"]
-            site_title = t("wizard.official_site", "🌐 {name} 官方網站", name=svc["name"])
-            site_btn = ttk.Button(btn_frame, text=site_title,
-                                  style="TButton",
-                                  command=lambda u=site_url: webbrowser.open(u))
-            site_btn.pack(side="left", fill="x", expand=True, padx=(4, 0))
-            Tooltip(site_btn, f"在瀏覽器中開啟 {site_url}")
-        else:
-            rec_btn.pack(fill="x")
 
         # Base URL display (compact single row)
         if svc.get("base_url"):
