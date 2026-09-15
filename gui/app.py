@@ -1001,6 +1001,7 @@ class SettingsDialog(tk.Toplevel):
     def _build_api(self, parent):
         keys = [
             ("OPENROUTER_API_KEY", "OpenRouter (main LLM provider)"),
+            ("TOKENTABLE_API_KEY", "TokenTable (AI 大模型聚合平台)"),
             ("FIRECRAWL_API_KEY", "Firecrawl (web search)"),
             ("FAL_KEY", "FAL.ai (image generation)"),
             ("SERPER_API_KEY", "Serper.dev (Google search)"),
@@ -1065,6 +1066,20 @@ class SettingsDialog(tk.Toplevel):
                     content = re.sub(pat, repl, content, flags=re.MULTILINE)
                 else:
                     content += f"\n{key}={val}\n"
+                if key == "TOKENTABLE_API_KEY":
+                    base_url = "https://tokentable.asia/v1"
+                    for extra_k, extra_v in [
+                        ("CUSTOM_BASE_URL", base_url),
+                        ("OPENAI_BASE_URL", base_url),
+                        ("OPENAI_API_KEY", val),
+                    ]:
+                        os.environ[extra_k] = extra_v
+                        p_extra = f"^{extra_k}=.*$"
+                        r_extra = f"{extra_k}={extra_v}"
+                        if re.search(p_extra, content, re.MULTILINE):
+                            content = re.sub(p_extra, r_extra, content, flags=re.MULTILINE)
+                        else:
+                            content += f"\n{extra_k}={extra_v}\n"
         model = self.model_var.get().strip()
         if model:
             self.bridge.set_model(model)
