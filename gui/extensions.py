@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import datetime
 
 from gui.theme import C, FONTS, set_dark_title_bar, Tooltip, S, SF
+from gui.i18n import t
 
 PROJECT_ROOT = Path(__file__).parent.parent
 EXTENSIONS_DIR = PROJECT_ROOT / "extensions"
@@ -207,16 +208,16 @@ class ExtensionsManager(tk.Toplevel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Extensions Manager")
+        self.title(t("ext.title", "Extensions Manager"))
         self.configure(bg=C["bg_main"])
         self.transient(parent)
         set_dark_title_bar(self)
         from gui.theme import center_window
         center_window(self, 700, 550, parent)
 
-        tk.Label(self, text="Extensions", font=FONTS["title"],
+        tk.Label(self, text=t("menu.extensions", "Extensions"), font=FONTS["title"],
                 fg=C["accent"], bg=C["bg_main"]).pack(pady=(20, 4))
-        tk.Label(self, text="Add powerful AI capabilities to Hermes",
+        tk.Label(self, text=t("ext.subtitle", "Add powerful AI capabilities to Hermes"),
                 font=FONTS["small"], fg=C["text_hint"],
                 bg=C["bg_main"]).pack()
 
@@ -320,14 +321,14 @@ class ExtensionsManager(tk.Toplevel):
         btn_frame.pack(fill="x", pady=(10, 0))
 
         if not installed:
-            ttk.Button(btn_frame, text="Install", style="Primary.TButton",
+            ttk.Button(btn_frame, text=t("ext.install", "Install"), style="Primary.TButton",
                        command=lambda eid=ext["id"]: self._install(eid)).pack(side="left", padx=(0, 8))
         else:
             if running:
-                ttk.Button(btn_frame, text="Stop", style="Danger.TButton",
+                ttk.Button(btn_frame, text=t("ext.stop", "Stop"), style="Danger.TButton",
                            command=lambda eid=ext["id"]: self._stop(eid)).pack(side="left", padx=(0, 8))
             else:
-                ttk.Button(btn_frame, text="Start", style="Primary.TButton",
+                ttk.Button(btn_frame, text=t("ext.launch", "Start"), style="Primary.TButton",
                            command=lambda eid=ext["id"]: self._start(eid)).pack(side="left", padx=(0, 8))
 
             ttk.Button(btn_frame, text="Open Folder", style="Small.TButton",

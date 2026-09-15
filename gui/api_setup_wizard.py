@@ -13,6 +13,7 @@ from pathlib import Path
 
 from gui.theme import C, FONTS, set_dark_title_bar, Tooltip, SF
 from hermes_constants import get_hermes_home
+from gui.i18n import t
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -158,7 +159,7 @@ class APISetupWizard(tk.Toplevel):
         super().__init__(parent)
         self.on_complete = on_complete
         self.auto_mode = auto_mode  # True = only show missing keys
-        self.title("Hermes Agent - API Setup")
+        self.title(t("wizard.title", "Hermes Agent - API Setup Wizard"))
         self.configure(bg=C["bg_main"])
         self.transient(parent)
         self.grab_set()
@@ -384,9 +385,9 @@ class APISetupWizard(tk.Toplevel):
         bottom = tk.Frame(self, bg=C["bg_main"])
         bottom.pack(fill="x", padx=40, pady=(20, 0))
 
-        ttk.Button(bottom, text="Save & Next", style="Primary.TButton",
+        ttk.Button(bottom, text=t("wizard.next", "Save & Next"), style="Primary.TButton",
                    command=lambda: self._save_current(svc)).pack(side="right")
-        ttk.Button(bottom, text="Skip", style="TButton",
+        ttk.Button(bottom, text=t("wizard.skip", "Skip"), style="TButton",
                    command=self._next_step).pack(side="right", padx=(0, 8))
 
         # Focus the entry
@@ -510,7 +511,7 @@ class APISetupWizard(tk.Toplevel):
                 font=FONTS["small"], fg=C["text_hint"],
                 bg=C["bg_main"], justify="center").pack(pady=(20, 0))
 
-        ttk.Button(self, text="Start Chatting!", style="Primary.TButton",
+        ttk.Button(self, text=t("wizard.finish", "Start Chatting!"), style="Primary.TButton",
                    command=self._finish).pack(pady=20)
 
     def _finish(self):

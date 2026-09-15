@@ -1,3 +1,9 @@
+<p align="right">
+  <a href="README.md"><strong>English</strong></a> |
+  <a href="README.zh-TW.md">繁體中文</a> |
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 # Portable Hermes Agent
 
 **Portable AI agent desktop for Windows** — 100 tools, GUI, local models via LM Studio, TTS, Music, ComfyUI, workflows, tool maker. No install. No Docker. No admin rights.
@@ -10,6 +16,7 @@ Built on [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agen
 
 ### Desktop GUI
 - Dark-themed Tkinter interface with chat, sidebar, and session management
+- Multi-language UI support with real-time switching: Traditional Chinese (繁體中文), Simplified Chinese (簡體中文), and English
 - Image attachment with thumbnails (vision model support)
 - Guided mode — works even without an AI model connected
 - API key setup wizard with individual service configuration

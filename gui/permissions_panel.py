@@ -10,6 +10,7 @@ from gui.permissions import (
     PERMISSION_DEFS, load_permissions, save_permissions,
     get_level_name, get_level_description,
 )
+from gui.i18n import t
 
 
 class PermissionsPanel(tk.Toplevel):
@@ -18,7 +19,7 @@ class PermissionsPanel(tk.Toplevel):
     def __init__(self, parent, on_save=None):
         super().__init__(parent)
         self.on_save = on_save
-        self.title("Permissions")
+        self.title(t("perms.title", "Permissions"))
         self.configure(bg=C["bg_main"])
         self.transient(parent)
         self.grab_set()
@@ -29,9 +30,9 @@ class PermissionsPanel(tk.Toplevel):
         self.sliders = {}
 
         # Title
-        tk.Label(self, text="Permissions", font=FONTS["title"],
+        tk.Label(self, text=t("perms.title", "Permissions"), font=FONTS["title"],
                 fg=C["accent"], bg=C["bg_main"]).pack(pady=(16, 2))
-        tk.Label(self, text="Control what Hermes is allowed to do on your computer",
+        tk.Label(self, text=t("perms.subtitle", "Control what Hermes is allowed to do on your computer"),
                 font=FONTS["small"], fg=C["text_hint"],
                 bg=C["bg_main"]).pack()
 
@@ -72,9 +73,9 @@ class PermissionsPanel(tk.Toplevel):
         btn_frame = tk.Frame(self, bg=C["bg_main"])
         btn_frame.pack(fill="x", padx=20, pady=(0, 16))
 
-        ttk.Button(btn_frame, text="Save", style="Primary.TButton",
+        ttk.Button(btn_frame, text=t("perms.save", "Save"), style="Primary.TButton",
                    command=self._save).pack(side="right")
-        ttk.Button(btn_frame, text="Reset to Defaults", style="TButton",
+        ttk.Button(btn_frame, text=t("perms.reset", "Reset to Defaults"), style="TButton",
                    command=self._reset).pack(side="right", padx=(0, 8))
 
     def _build_card(self, parent, key, defn):
