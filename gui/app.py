@@ -11,9 +11,11 @@ import json
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import threading
+import webbrowser
+import uuid
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 try:
     from PIL import Image, ImageTk
@@ -205,33 +207,176 @@ class MessageBubble(tk.Frame):
 
 
 class ToolCallWidget(tk.Frame):
-    """Compact tool-call indicator."""
+    """Compact expandable tool-call indicator."""
 
     def __init__(self, parent, tool_name, args_preview):
         super().__init__(parent, bg=C["bg_main"])
+        self.tool_name = tool_name
+        self.args_preview = str(args_preview or "")
+        self._expanded = False
 
         pad = tk.Frame(self, bg=C["bg_main"])
-        pad.pack(fill="x", padx=16, pady=1)
+        pad.pack(fill="x", padx=16, pady=2)
 
-        card = tk.Frame(pad, bg=C["msg_tool"], highlightbackground=C["msg_tool_border"],
-                       highlightthickness=1, padx=8, pady=4)
-        card.pack(side="left", fill="x", expand=True)
+        self.card = tk.Frame(pad, bg=C["msg_tool"], highlightbackground=C["msg_tool_border"],
+                             highlightthickness=1, padx=8, pady=4, cursor="hand2")
+        self.card.pack(side="left", fill="x", expand=True)
 
-        row = tk.Frame(card, bg=C["msg_tool"])
+        row = tk.Frame(self.card, bg=C["msg_tool"], cursor="hand2")
         row.pack(fill="x")
 
-        tk.Label(row, text="\u25B6", font=SF("Segoe UI", 8),
-                fg=C["warning_dark"], bg=C["msg_tool"]).pack(side="left", padx=(0, 6))
-        tk.Label(row, text=tool_name, font=FONTS["mono_small"] + ("bold",),
-                fg=C["accent"], bg=C["msg_tool"]).pack(side="left")
+        self.arrow_lbl = tk.Label(row, text="\u25B6", font=SF("Segoe UI", 8),
+                                  fg=C["warning_dark"], bg=C["msg_tool"])
+        self.arrow_lbl.pack(side="left", padx=(0, 6))
 
-        if args_preview:
-            preview = str(args_preview)[:100]
-            if len(str(args_preview)) > 100:
+        tk.Label(row, text=tool_name, font=FONTS["mono_small"] + ("bold",),
+                 fg=C["accent"], bg=C["msg_tool"]).pack(side="left")
+
+        self.toggle_btn = tk.Label(row, text=t("chat.tool_expand", "Details \u25bc"),
+                                   font=SF("Segoe UI", 8), fg=C["text_hint"],
+                                   bg=C["msg_tool"], cursor="hand2")
+        self.toggle_btn.pack(side="right", padx=(4, 0))
+
+        # Compact preview
+        self.preview_lbl = None
+        if self.args_preview:
+            preview = self.args_preview[:90].replace("\n", " ")
+            if len(self.args_preview) > 90:
                 preview += "..."
-            tk.Label(card, text=preview, font=FONTS["mono_small"],
-                    fg=C["text_hint"], bg=C["msg_tool"],
-                    wraplength=S(500), justify="left", anchor="w").pack(fill="x")
+            self.preview_lbl = tk.Label(self.card, text=preview, font=FONTS["mono_small"],
+                                        fg=C["text_hint"], bg=C["msg_tool"],
+                                        wraplength=S(600), justify="left", anchor="w", cursor="hand2")
+            self.preview_lbl.pack(fill="x", pady=(2, 0))
+
+        # Expanded details frame (initially hidden)
+        self.details_frame = tk.Frame(self.card, bg=C["bg_input"], padx=6, pady=4)
+        detail_header = tk.Label(self.details_frame, text=t("chat.tool_args", "Arguments / Parameters:"),
+                                 font=SF("Segoe UI", 8, "bold"), fg=C["accent"], bg=C["bg_input"], anchor="w")
+        detail_header.pack(fill="x", pady=(0, 2))
+
+        self.detail_text = tk.Text(self.details_frame, wrap="word", bg=C["bg_input"],
+                                   fg=C["text_primary"], font=FONTS["mono_small"],
+                                   relief="flat", borderwidth=0, highlightthickness=0,
+                                   padx=2, pady=2, cursor="arrow")
+        self.detail_text.insert("1.0", self.args_preview)
+        self.detail_text.configure(state="disabled")
+        lines = max(2, min(14, self.args_preview.count('\n') + max(1, len(self.args_preview) // 60)))
+        self.detail_text.configure(height=lines)
+        self.detail_text.pack(fill="x")
+
+        # Bind clicks to toggle expansion
+        for w in (self.card, row, self.arrow_lbl, self.toggle_btn):
+            w.bind("<Button-1>", lambda e: self.toggle())
+        if self.preview_lbl:
+            self.preview_lbl.bind("<Button-1>", lambda e: self.toggle())
+
+    def toggle(self):
+        self._expanded = not self._expanded
+        if self._expanded:
+            self.arrow_lbl.configure(text="\u25BC")
+            self.toggle_btn.configure(text=t("chat.tool_collapse", "Collapse \u25b2"))
+            if self.preview_lbl:
+                self.preview_lbl.pack_forget()
+            self.details_frame.pack(fill="x", pady=(4, 2))
+        else:
+            self.arrow_lbl.configure(text="\u25B6")
+            self.toggle_btn.configure(text=t("chat.tool_expand", "Details \u25bc"))
+            self.details_frame.pack_forget()
+            if self.preview_lbl:
+                self.preview_lbl.pack(fill="x", pady=(2, 0))
+
+
+class ThinkingBubble(tk.Frame):
+    """Collapsible card displaying the model's thinking / reasoning process."""
+
+    def __init__(self, parent):
+        super().__init__(parent, bg=C["bg_main"])
+        self._full_text = ""
+        self._expanded = True
+        self._finalized = False
+
+        pad = tk.Frame(self, bg=C["bg_main"])
+        pad.pack(fill="x", padx=16, pady=2)
+
+        self.card = tk.Frame(pad, bg=C["bg_card"],
+                             highlightbackground=C["border"],
+                             highlightthickness=1, padx=8, pady=4)
+        self.card.pack(side="left", fill="x", expand=True)
+
+        # Header row
+        hdr = tk.Frame(self.card, bg=C["bg_card"], cursor="hand2")
+        hdr.pack(fill="x")
+
+        tk.Label(hdr, text="\U0001f9e0", font=SF("Segoe UI", 10),
+                 fg=C["accent"], bg=C["bg_card"]).pack(side="left", padx=(0, 6))
+
+        self.title_lbl = tk.Label(hdr, text=t("chat.thinking_process", "Thinking Process"),
+                                  font=FONTS["small"] + ("bold",),
+                                  fg=C["text_secondary"], bg=C["bg_card"])
+        self.title_lbl.pack(side="left")
+
+        self.status_lbl = tk.Label(hdr, text=f"({t('chat.thinking_active', 'Thinking...')})",
+                                   font=SF("Segoe UI", 8),
+                                   fg=C["info"], bg=C["bg_card"])
+        self.status_lbl.pack(side="left", padx=(6, 0))
+
+        self.toggle_btn = tk.Label(hdr, text=t("chat.thinking_collapse", "Collapse \u25b2"),
+                                   font=SF("Segoe UI", 8), fg=C["accent"],
+                                   bg=C["bg_card"], cursor="hand2")
+        self.toggle_btn.pack(side="right")
+
+        # Body text area
+        self.body_frame = tk.Frame(self.card, bg=C["bg_card"], padx=4, pady=2)
+        self.body_frame.pack(fill="x", pady=(4, 0))
+
+        self.body = tk.Text(self.body_frame, wrap="word", bg=C["bg_card"],
+                            fg=C["text_disabled"], font=FONTS["mono_small"],
+                            relief="flat", borderwidth=0,
+                            padx=4, pady=2, cursor="arrow",
+                            highlightthickness=0, height=1)
+        self.body.pack(fill="x")
+
+        # Bind toggle
+        for w in (hdr, self.title_lbl, self.status_lbl, self.toggle_btn):
+            w.bind("<Button-1>", lambda e: self.toggle())
+
+    def append_reasoning(self, text: str):
+        if not text:
+            return
+        self._full_text += text
+        self.body.insert("end", text)
+        content = self.body.get("1.0", "end-1c")
+        lines = max(1, content.count('\n') + 1)
+        for line in content.split('\n'):
+            lines += max(0, len(line) // 70)
+        self.body.configure(height=min(lines, 12))
+        self.body.see("end")
+
+    def finalize(self):
+        if self._finalized:
+            return
+        self._finalized = True
+        try:
+            self.body.configure(state="disabled")
+            count = len(self._full_text.strip())
+            self.status_lbl.configure(
+                text=t("chat.thinking_finished", "Thinking finished ({count} chars)", count=count),
+                fg=C["text_hint"]
+            )
+        except Exception:
+            pass
+
+    def toggle(self):
+        self._expanded = not self._expanded
+        if self._expanded:
+            self.toggle_btn.configure(text=t("chat.thinking_collapse", "Collapse \u25b2"))
+            self.body_frame.pack(fill="x", pady=(4, 0))
+        else:
+            self.toggle_btn.configure(text=t("chat.thinking_expand", "Expand \u25bc"))
+            self.body_frame.pack_forget()
+
+    def get_text(self) -> str:
+        return self._full_text
 
 
 class StreamingBubble(tk.Frame):
@@ -346,6 +491,152 @@ def add_custom_model(model_id: str) -> bool:
     return False
 
 
+def remove_custom_model(model_id: str) -> bool:
+    """Remove a custom model ID and persist it."""
+    model_id = model_id.strip()
+    models = get_custom_models()
+    if model_id in models:
+        models.remove(model_id)
+        path = get_hermes_home() / "custom_models.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            path.write_text(json.dumps(models, ensure_ascii=False, indent=2), encoding="utf-8")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def update_custom_model(old_id: str, new_id: str) -> bool:
+    """Update a custom model ID."""
+    old_id = old_id.strip()
+    new_id = new_id.strip()
+    if not new_id or old_id == new_id:
+        return False
+    models = get_custom_models()
+    if old_id in models:
+        idx = models.index(old_id)
+        models[idx] = new_id
+        path = get_hermes_home() / "custom_models.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            path.write_text(json.dumps(models, ensure_ascii=False, indent=2), encoding="utf-8")
+            return True
+        except Exception:
+            pass
+    return False
+
+
+# ============================================================================
+# Custom API Endpoints Manager
+# ============================================================================
+
+def get_custom_endpoints() -> List[Dict[str, Any]]:
+    """Load user-defined custom API endpoints."""
+    path = get_hermes_home() / "custom_endpoints.json"
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, list) and len(data) > 0:
+                return data
+        except Exception:
+            pass
+    initial = []
+    tt_key = os.getenv("TOKENTABLE_API_KEY", "")
+    if tt_key:
+        initial.append({
+            "id": "tokentable",
+            "name": "TokenTable",
+            "base_url": "https://tokentable.asia/v1",
+            "api_key": tt_key,
+            "model": "auto"
+        })
+    custom_base = os.getenv("CUSTOM_BASE_URL", "") or os.getenv("OPENAI_BASE_URL", "")
+    custom_key = os.getenv("CUSTOM_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
+    if custom_base and custom_base != "https://tokentable.asia/v1":
+        initial.append({
+            "id": "custom_default",
+            "name": "Custom Endpoint",
+            "base_url": custom_base,
+            "api_key": custom_key,
+            "model": "auto"
+        })
+    return initial
+
+
+def save_custom_endpoints(endpoints: List[Dict[str, Any]]) -> bool:
+    """Save user-defined custom API endpoints."""
+    path = get_hermes_home() / "custom_endpoints.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.write_text(json.dumps(endpoints, ensure_ascii=False, indent=2), encoding="utf-8")
+        return True
+    except Exception:
+        return False
+
+
+def add_custom_endpoint(name: str, base_url: str, api_key: str, model: str = "auto") -> Dict[str, Any]:
+    endpoints = get_custom_endpoints()
+    ep_id = f"ep_{uuid.uuid4().hex[:8]}"
+    item = {
+        "id": ep_id,
+        "name": name.strip() or "Custom Endpoint",
+        "base_url": base_url.strip().rstrip("/"),
+        "api_key": api_key.strip(),
+        "model": model.strip() or "auto"
+    }
+    for i, ep in enumerate(endpoints):
+        if ep.get("name", "").lower() == item["name"].lower():
+            item["id"] = ep.get("id", ep_id)
+            endpoints[i] = item
+            save_custom_endpoints(endpoints)
+            return item
+    endpoints.append(item)
+    save_custom_endpoints(endpoints)
+    return item
+
+
+def delete_custom_endpoint(endpoint_id: str) -> bool:
+    endpoints = get_custom_endpoints()
+    new_eps = [ep for ep in endpoints if ep.get("id") != endpoint_id]
+    if len(new_eps) != len(endpoints):
+        save_custom_endpoints(new_eps)
+        return True
+    return False
+
+
+def activate_custom_endpoint(endpoint: Dict[str, Any]) -> bool:
+    """Activate an endpoint: sets in os.environ and persists to .env."""
+    base_url = endpoint.get("base_url", "").strip().rstrip("/")
+    api_key = endpoint.get("api_key", "").strip()
+    model = endpoint.get("model", "").strip() or "auto"
+    name = endpoint.get("name", "")
+
+    if not base_url:
+        return False
+
+    os.environ["OPENAI_BASE_URL"] = base_url
+    os.environ["CUSTOM_BASE_URL"] = base_url
+    os.environ["OPENAI_API_KEY"] = api_key
+    os.environ["CUSTOM_API_KEY"] = api_key
+    os.environ["ACTIVE_CUSTOM_ENDPOINT_ID"] = endpoint.get("id", "")
+
+    from gui.api_setup_wizard import _save_key_to_env
+    _save_key_to_env("OPENAI_BASE_URL", base_url)
+    _save_key_to_env("CUSTOM_BASE_URL", base_url)
+    _save_key_to_env("OPENAI_API_KEY", api_key)
+    _save_key_to_env("CUSTOM_API_KEY", api_key)
+    _save_key_to_env("ACTIVE_CUSTOM_ENDPOINT_ID", endpoint.get("id", ""))
+    if name.lower() == "tokentable":
+        os.environ["TOKENTABLE_API_KEY"] = api_key
+        _save_key_to_env("TOKENTABLE_API_KEY", api_key)
+
+    if model:
+        add_custom_model(model)
+
+    return True
+
+
 # ============================================================================
 # Sidebar
 # ============================================================================
@@ -419,6 +710,7 @@ class Sidebar(tk.Frame):
         self.model_var = tk.StringVar(value="auto")
         display_values = [self._display_name(m) for m in self._all_models]
         display_values.append(t("sidebar.add_custom_model", "+ 自訂模型..."))
+        display_values.append(t("sidebar.manage_models", "✎ 管理模型清單..."))
         self.model_combo = ttk.Combobox(model_fr, textvariable=tk.StringVar(),
                                         values=display_values,
                                         font=FONTS["small"], state="readonly")
@@ -490,6 +782,7 @@ class Sidebar(tk.Frame):
             self._all_models.append((model_id, model_id, "Custom"))
             display_values = [self._display_name(m) for m in self._all_models]
             display_values.append(t("sidebar.add_custom_model", "+ 自訂模型..."))
+            display_values.append(t("sidebar.manage_models", "✎ 管理模型清單..."))
             self.model_combo["values"] = display_values
             self.model_combo.current(len(self._all_models) - 1)
             return
@@ -505,6 +798,7 @@ class Sidebar(tk.Frame):
         self._all_models = self._get_unified_models()
         display_values = [self._display_name(m) for m in self._all_models]
         display_values.append(t("sidebar.add_custom_model", "+ 自訂模型..."))
+        display_values.append(t("sidebar.manage_models", "✎ 管理模型清單..."))
         self.model_combo["values"] = display_values
         self._select_model_in_combo(current)
 
@@ -736,6 +1030,11 @@ class Sidebar(tk.Frame):
                     self.on_model_change(new_model)
             else:
                 self._select_model_in_combo(self.model_var.get())
+            return
+        elif idx == len(self._all_models) + 1:
+            # User selected "✎ 管理模型清單..."
+            CustomModelsDialog(self.winfo_toplevel(), on_change=lambda mid=None: self.refresh_model_list(mid))
+            self._select_model_in_combo(self.model_var.get())
             return
 
         if 0 <= idx < len(self._all_models):
@@ -1020,6 +1319,341 @@ class Sidebar(tk.Frame):
 
 
 # ============================================================================
+# About Dialog
+# ============================================================================
+
+class AboutDialog(tk.Toplevel):
+    """Custom About dialog with MIT license info and clickable hyperlinks."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title(t("about.title", "About Portable Hermes Agent"))
+        self.configure(bg=C["bg_main"])
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        try:
+            center_window(self, 520, 440, parent)
+            set_dark_title_bar(self)
+        except Exception:
+            pass
+
+        pad = tk.Frame(self, bg=C["bg_main"], padx=20, pady=16)
+        pad.pack(fill="both", expand=True)
+
+        # Header
+        tk.Label(pad, text="HERMES AGENT", font=FONTS["logo"],
+                 fg=C["accent"], bg=C["bg_main"]).pack(pady=(0, 2))
+        tk.Label(pad, text=f"Core v{HERMES_CORE_VERSION} • Portable Windows Distribution",
+                 font=FONTS["small"] + ("bold",), fg=C["text_primary"], bg=C["bg_main"]).pack(pady=(0, 10))
+
+        # License Frame
+        lic_frame = tk.LabelFrame(pad, text=t("about.license_title", "License: MIT Open Source License"),
+                                  font=FONTS["small"] + ("bold",), fg=C["accent"],
+                                  bg=C["bg_card"], padx=10, pady=8, highlightthickness=0)
+        lic_frame.pack(fill="x", pady=(0, 12))
+
+        tk.Label(lic_frame, text=t("about.copy_notice", "Copyright (c) 2024-2026 Nous Research & Portable Hermes Contributors"),
+                 font=SF("Segoe UI", 8), fg=C["text_secondary"], bg=C["bg_card"], anchor="w").pack(fill="x")
+        tk.Label(lic_frame, text=t("about.license_summary", "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction."),
+                 font=SF("Segoe UI", 8), fg=C["text_hint"], bg=C["bg_card"], wraplength=S(460), justify="left", anchor="w").pack(fill="x", pady=(4, 0))
+
+        # Clickable Hyperlinks
+        links_frame = tk.Frame(pad, bg=C["bg_main"])
+        links_frame.pack(fill="x", pady=(0, 12))
+
+        def _make_link(parent_frame, text, url):
+            row = tk.Frame(parent_frame, bg=C["bg_main"])
+            row.pack(fill="x", pady=2)
+            lbl = tk.Label(row, text=text, font=SF("Segoe UI", 9, "underline"),
+                           fg=C["accent"], bg=C["bg_main"], cursor="hand2", anchor="w")
+            lbl.pack(side="left")
+            lbl.bind("<Button-1>", lambda e, u=url: webbrowser.open(u))
+            Tooltip(lbl, f"點擊在瀏覽器中開啟 {url}")
+
+        _make_link(links_frame, "🌐 " + t("about.repo_link", "GitHub Repository: https://github.com/aivrar/portable-hermes-agent"), "https://github.com/aivrar/portable-hermes-agent")
+        _make_link(links_frame, "📦 " + t("about.upstream_link", "Upstream Project: https://github.com/NousResearch/hermes-agent"), "https://github.com/NousResearch/hermes-agent")
+        _make_link(links_frame, "📜 " + t("about.license_link", "MIT License: https://opensource.org/licenses/MIT"), "https://opensource.org/licenses/MIT")
+
+        # Close button
+        ttk.Button(pad, text=t("about.close", "關閉"), style="Primary.TButton",
+                   command=self.destroy).pack(pady=(4, 0))
+
+
+# ============================================================================
+# Custom Models Dialog
+# ============================================================================
+
+class CustomModelsDialog(tk.Toplevel):
+    """Dialog to manage (view, add, edit, delete) custom model IDs."""
+
+    def __init__(self, parent, on_change=None):
+        super().__init__(parent)
+        self.on_change = on_change
+        self.title(t("models.manage_title", "管理自訂模型清單"))
+        self.configure(bg=C["bg_main"])
+        self.transient(parent)
+        self.grab_set()
+
+        try:
+            center_window(self, 460, 380, parent)
+            set_dark_title_bar(self)
+        except Exception:
+            pass
+
+        pad = tk.Frame(self, bg=C["bg_main"], padx=16, pady=16)
+        pad.pack(fill="both", expand=True)
+
+        tk.Label(pad, text=t("models.manage_title", "管理自訂模型清單"),
+                 font=FONTS["subtitle"], fg=C["accent"], bg=C["bg_main"]).pack(anchor="w", pady=(0, 8))
+
+        list_frame = tk.Frame(pad, bg=C["bg_input"], highlightbackground=C["border"], highlightthickness=1)
+        list_frame.pack(fill="both", expand=True, pady=(0, 10))
+
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
+        self.listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
+                                  font=FONTS["mono_small"], bg=C["bg_input"],
+                                  fg=C["text_primary"], selectbackground=C["accent"],
+                                  selectforeground="white", relief="flat", borderwidth=0)
+        scrollbar.config(command=self.listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.listbox.pack(side="left", fill="both", expand=True, padx=4, pady=4)
+
+        btn_row = tk.Frame(pad, bg=C["bg_main"])
+        btn_row.pack(fill="x", pady=(0, 6))
+
+        ttk.Button(btn_row, text=t("models.add", "+ 新增模型"), style="Small.TButton",
+                   command=self._add_model).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("models.edit", "✎ 編輯"), style="Small.TButton",
+                   command=self._edit_model).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("models.delete", "🗑 刪除"), style="Small.TButton",
+                   command=self._delete_model).pack(side="left")
+
+        ttk.Button(pad, text=t("about.close", "關閉"), style="Primary.TButton",
+                   command=self.destroy).pack(pady=(6, 0))
+
+        self._refresh()
+
+    def _refresh(self):
+        self.listbox.delete(0, "end")
+        models = get_custom_models()
+        for m in models:
+            self.listbox.insert("end", m)
+
+    def _add_model(self):
+        val = simpledialog.askstring(t("models.add", "+ 新增模型"),
+                                    t("sidebar.custom_model_prompt", "請輸入模型 ID："),
+                                    parent=self)
+        if val and val.strip():
+            add_custom_model(val.strip())
+            self._refresh()
+            if self.on_change:
+                self.on_change(val.strip())
+
+    def _edit_model(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            return
+        old_val = self.listbox.get(sel[0])
+        new_val = simpledialog.askstring(t("models.edit_title", "編輯模型 ID"),
+                                         t("models.edit_prompt", "請輸入新的模型識別碼："),
+                                         initialvalue=old_val, parent=self)
+        if new_val and new_val.strip() and new_val.strip() != old_val:
+            update_custom_model(old_val, new_val.strip())
+            self._refresh()
+            if self.on_change:
+                self.on_change(new_val.strip())
+
+    def _delete_model(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            return
+        val = self.listbox.get(sel[0])
+        if messagebox.askyesno(t("models.delete", "刪除模型"),
+                               t("models.delete_confirm", "確定要刪除模型「{model}」嗎？", model=val),
+                               parent=self):
+            remove_custom_model(val)
+            self._refresh()
+            if self.on_change:
+                self.on_change(None)
+
+
+# ============================================================================
+# Custom Endpoints Dialog
+# ============================================================================
+
+class CustomEndpointsDialog(tk.Toplevel):
+    """Dialog to manage multiple custom API endpoints."""
+
+    def __init__(self, parent, on_change=None):
+        super().__init__(parent)
+        self.on_change = on_change
+        self.title(t("endpoints.title", "自訂 API 端點清單"))
+        self.configure(bg=C["bg_main"])
+        self.transient(parent)
+        self.grab_set()
+
+        try:
+            center_window(self, 560, 460, parent)
+            set_dark_title_bar(self)
+        except Exception:
+            pass
+
+        pad = tk.Frame(self, bg=C["bg_main"], padx=16, pady=16)
+        pad.pack(fill="both", expand=True)
+
+        tk.Label(pad, text=t("endpoints.title", "自訂 API 端點清單"),
+                 font=FONTS["subtitle"], fg=C["accent"], bg=C["bg_main"]).pack(anchor="w")
+        tk.Label(pad, text=t("endpoints.desc", "管理多個 OpenAI 相容端點（支援 TokenTable、Ollama、vLLM、OneAPI 等）"),
+                 font=SF("Segoe UI", 8), fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w", pady=(0, 8))
+
+        list_frame = tk.Frame(pad, bg=C["bg_input"], highlightbackground=C["border"], highlightthickness=1)
+        list_frame.pack(fill="both", expand=True, pady=(0, 10))
+
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
+        self.listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
+                                  font=FONTS["mono_small"], bg=C["bg_input"],
+                                  fg=C["text_primary"], selectbackground=C["accent"],
+                                  selectforeground="white", relief="flat", borderwidth=0)
+        scrollbar.config(command=self.listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.listbox.pack(side="left", fill="both", expand=True, padx=4, pady=4)
+
+        self.status_lbl = tk.Label(pad, text="", font=SF("Segoe UI", 8), fg=C["success"], bg=C["bg_main"])
+        self.status_lbl.pack(anchor="w", pady=(0, 4))
+
+        btn_row = tk.Frame(pad, bg=C["bg_main"])
+        btn_row.pack(fill="x", pady=(0, 6))
+
+        ttk.Button(btn_row, text=t("endpoints.activate", "★ 設為目前啟用"), style="Primary.TButton",
+                   command=self._activate_selected).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("endpoints.add", "+ 新增端點"), style="Small.TButton",
+                   command=self._add_endpoint).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("endpoints.edit", "✎ 編輯"), style="Small.TButton",
+                   command=self._edit_endpoint).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("endpoints.delete", "🗑 刪除"), style="Small.TButton",
+                   command=self._delete_endpoint).pack(side="left")
+
+        ttk.Button(pad, text=t("about.close", "關閉"), style="Secondary.TButton",
+                   command=self.destroy).pack(pady=(4, 0))
+
+        self._refresh()
+
+    def _refresh(self):
+        self.listbox.delete(0, "end")
+        self.endpoints = get_custom_endpoints()
+        active_id = os.getenv("ACTIVE_CUSTOM_ENDPOINT_ID", "")
+        cur_url = os.getenv("OPENAI_BASE_URL", "").rstrip("/")
+
+        for ep in self.endpoints:
+            name = ep.get("name", "Endpoint")
+            url = ep.get("base_url", "")
+            is_active = (ep.get("id") == active_id) or (url.rstrip("/") == cur_url and cur_url != "")
+            badge = "★ [啟用中] " if is_active else "   "
+            self.listbox.insert("end", f"{badge}{name}  ({url})")
+
+    def _activate_selected(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            return
+        ep = self.endpoints[sel[0]]
+        activate_custom_endpoint(ep)
+        self._refresh()
+        self.status_lbl.configure(text=t("endpoints.activated_msg", "已將端點「{name}」設為目前啟用端點。", name=ep.get("name")), fg=C["success"])
+        if self.on_change:
+            self.on_change(ep)
+
+    def _add_endpoint(self):
+        self._open_edit_dialog(None)
+
+    def _edit_endpoint(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            return
+        self._open_edit_dialog(self.endpoints[sel[0]])
+
+    def _open_edit_dialog(self, ep):
+        dlg = tk.Toplevel(self)
+        dlg.title(t("endpoints.edit_title", "端點設定"))
+        dlg.configure(bg=C["bg_main"])
+        dlg.transient(self)
+        dlg.grab_set()
+
+        try:
+            center_window(dlg, 420, 320, self)
+            set_dark_title_bar(dlg)
+        except Exception:
+            pass
+
+        p = tk.Frame(dlg, bg=C["bg_main"], padx=16, pady=12)
+        p.pack(fill="both", expand=True)
+
+        tk.Label(p, text=t("endpoints.name", "名稱："), font=FONTS["small"], fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w")
+        name_ent = tk.Entry(p, font=FONTS["body"], bg=C["bg_input"], fg=C["text_primary"], insertbackground=C["text_primary"], relief="flat")
+        name_ent.pack(fill="x", pady=(2, 6))
+        if ep:
+            name_ent.insert(0, ep.get("name", ""))
+
+        tk.Label(p, text=t("endpoints.base_url", "端點網址 (Base URL)："), font=FONTS["small"], fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w")
+        url_ent = tk.Entry(p, font=FONTS["mono_small"], bg=C["bg_input"], fg=C["text_primary"], insertbackground=C["text_primary"], relief="flat")
+        url_ent.pack(fill="x", pady=(2, 6))
+        if ep:
+            url_ent.insert(0, ep.get("base_url", ""))
+        else:
+            url_ent.insert(0, "https://")
+
+        tk.Label(p, text=t("endpoints.api_key", "金鑰 (API Key)："), font=FONTS["small"], fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w")
+        key_ent = tk.Entry(p, font=FONTS["mono_small"], bg=C["bg_input"], fg=C["text_primary"], insertbackground=C["text_primary"], relief="flat")
+        key_ent.pack(fill="x", pady=(2, 6))
+        if ep:
+            key_ent.insert(0, ep.get("api_key", ""))
+
+        tk.Label(p, text=t("endpoints.model", "預設模型："), font=FONTS["small"], fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w")
+        model_ent = tk.Entry(p, font=FONTS["mono_small"], bg=C["bg_input"], fg=C["text_primary"], insertbackground=C["text_primary"], relief="flat")
+        model_ent.pack(fill="x", pady=(2, 10))
+        if ep:
+            model_ent.insert(0, ep.get("model", "auto"))
+        else:
+            model_ent.insert(0, "auto")
+
+        def _save_ep():
+            nm = name_ent.get().strip() or "Custom Endpoint"
+            u = url_ent.get().strip()
+            k = key_ent.get().strip()
+            m = model_ent.get().strip() or "auto"
+            if not u:
+                return
+            if ep:
+                ep["name"] = nm
+                ep["base_url"] = u
+                ep["api_key"] = k
+                ep["model"] = m
+                save_custom_endpoints(self.endpoints)
+            else:
+                add_custom_endpoint(nm, u, k, m)
+            dlg.destroy()
+            self._refresh()
+            if self.on_change:
+                self.on_change(None)
+
+        ttk.Button(p, text=t("settings.save", "儲存"), style="Primary.TButton", command=_save_ep).pack()
+
+    def _delete_endpoint(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            return
+        ep = self.endpoints[sel[0]]
+        if messagebox.askyesno(t("endpoints.delete", "刪除端點"),
+                               t("endpoints.delete_confirm", "確定要刪除端點「{name}」嗎？", name=ep.get("name")),
+                               parent=self):
+            delete_custom_endpoint(ep.get("id"))
+            self._refresh()
+            if self.on_change:
+                self.on_change(None)
+
+
+# ============================================================================
 # Settings Dialog
 # ============================================================================
 
@@ -1050,6 +1684,11 @@ class SettingsDialog(tk.Toplevel):
         api_fr = tk.Frame(nb, bg=C["bg_main"], padx=16, pady=16)
         nb.add(api_fr, text=t("settings.tab_api", "  API Keys  "))
         self._build_api(api_fr)
+
+        # -- Custom Endpoints tab --
+        ep_fr = tk.Frame(nb, bg=C["bg_main"], padx=16, pady=16)
+        nb.add(ep_fr, text=t("settings.tab_endpoints", "  API Endpoints  "))
+        self._build_endpoints(ep_fr)
 
         # -- Model tab --
         mdl_fr = tk.Frame(nb, bg=C["bg_main"], padx=16, pady=16)
@@ -1105,6 +1744,85 @@ class SettingsDialog(tk.Toplevel):
                 ent.insert(0, cur)
             self.key_entries[key] = ent
 
+    def _build_endpoints(self, parent):
+        tk.Label(parent, text=t("endpoints.desc", "管理多個 OpenAI 相容端點（支援 TokenTable、Ollama、vLLM、OneAPI 等）"),
+                 font=SF("Segoe UI", 8), fg=C["text_secondary"], bg=C["bg_main"],
+                 wraplength=S(500), justify="left").pack(anchor="w", pady=(0, 8))
+
+        list_frame = tk.Frame(parent, bg=C["bg_input"], highlightbackground=C["border"], highlightthickness=1)
+        list_frame.pack(fill="both", expand=True, pady=(0, 8))
+
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
+        self.ep_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set,
+                                     font=FONTS["mono_small"], bg=C["bg_input"],
+                                     fg=C["text_primary"], selectbackground=C["accent"],
+                                     selectforeground="white", relief="flat", borderwidth=0)
+        scrollbar.config(command=self.ep_listbox.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.ep_listbox.pack(side="left", fill="both", expand=True, padx=4, pady=4)
+
+        self.ep_status_lbl = tk.Label(parent, text="", font=SF("Segoe UI", 8), fg=C["success"], bg=C["bg_main"])
+        self.ep_status_lbl.pack(anchor="w", pady=(0, 4))
+
+        btn_row = tk.Frame(parent, bg=C["bg_main"])
+        btn_row.pack(fill="x", pady=(0, 4))
+
+        ttk.Button(btn_row, text=t("endpoints.activate", "★ 設為目前啟用"), style="Primary.TButton",
+                   command=self._activate_selected_ep).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("endpoints.add", "+ 新增端點"), style="Small.TButton",
+                   command=self._add_ep).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("endpoints.edit", "✎ 編輯"), style="Small.TButton",
+                   command=self._edit_ep).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_row, text=t("endpoints.delete", "🗑 刪除"), style="Small.TButton",
+                   command=self._delete_ep).pack(side="left")
+
+        self._refresh_endpoints()
+
+    def _refresh_endpoints(self):
+        self.ep_listbox.delete(0, "end")
+        self.endpoints_data = get_custom_endpoints()
+        active_id = os.getenv("ACTIVE_CUSTOM_ENDPOINT_ID", "")
+        cur_url = os.getenv("OPENAI_BASE_URL", "").rstrip("/")
+
+        for ep in self.endpoints_data:
+            name = ep.get("name", "Endpoint")
+            url = ep.get("base_url", "")
+            is_active = (ep.get("id") == active_id) or (url.rstrip("/") == cur_url and cur_url != "")
+            badge = "★ [啟用中] " if is_active else "   "
+            self.ep_listbox.insert("end", f"{badge}{name}  ({url})")
+
+    def _activate_selected_ep(self):
+        sel = self.ep_listbox.curselection()
+        if not sel:
+            return
+        ep = self.endpoints_data[sel[0]]
+        activate_custom_endpoint(ep)
+        self._refresh_endpoints()
+        if "CUSTOM_BASE_URL" in self.key_entries:
+            self.key_entries["CUSTOM_BASE_URL"].delete(0, "end")
+            self.key_entries["CUSTOM_BASE_URL"].insert(0, ep.get("base_url", ""))
+        if "OPENAI_API_KEY" in self.key_entries:
+            self.key_entries["OPENAI_API_KEY"].delete(0, "end")
+            self.key_entries["OPENAI_API_KEY"].insert(0, ep.get("api_key", ""))
+        self.ep_status_lbl.configure(text=t("endpoints.activated_msg", "已將端點「{name}」設為目前啟用端點。", name=ep.get("name")), fg=C["success"])
+
+    def _add_ep(self):
+        CustomEndpointsDialog(self, on_change=lambda ep: self._refresh_endpoints())
+
+    def _edit_ep(self):
+        CustomEndpointsDialog(self, on_change=lambda ep: self._refresh_endpoints())
+
+    def _delete_ep(self):
+        sel = self.ep_listbox.curselection()
+        if not sel:
+            return
+        ep = self.endpoints_data[sel[0]]
+        if messagebox.askyesno(t("endpoints.delete", "刪除端點"),
+                               t("endpoints.delete_confirm", "確定要刪除端點「{name}」嗎？", name=ep.get("name")),
+                               parent=self):
+            delete_custom_endpoint(ep.get("id"))
+            self._refresh_endpoints()
+
     def _build_model(self, parent):
         tk.Label(parent, text=t("settings.default_model", "Default Model"), font=FONTS["small"],
                 fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w", pady=(2, 0))
@@ -1123,7 +1841,7 @@ class SettingsDialog(tk.Toplevel):
         self.model_combo.pack(fill="x", pady=(4, 6))
 
         tk.Label(parent, text=t("settings.model_hint", "可選取或輸入任意模型 ID（例如 TokenTable 的 auto、claude-3-7-sonnet、deepseek-chat 等）"),
-                font=SF("Segoe UI", 8), fg=C["text_disabled"], bg=C["bg_main"], wraplength=500, justify="left").pack(anchor="w", pady=(0, 14))
+                font=SF("Segoe UI", 8), fg=C["text_disabled"], bg=C["bg_main"], wraplength=500, justify="left").pack(anchor="w", pady=(0, 10))
 
         # Add custom model frame
         add_frame = tk.LabelFrame(parent, text=t("settings.add_custom_model", "手動新增自訂模型"),
@@ -1165,6 +1883,21 @@ class SettingsDialog(tk.Toplevel):
                                          bg=C["bg_main"])
         self.model_status_lbl.pack(anchor="w")
 
+        # Manage models button
+        manage_row = tk.Frame(parent, bg=C["bg_main"])
+        manage_row.pack(fill="x", pady=(0, 8))
+        ttk.Button(manage_row, text=t("models.manage_title", "✎ 管理自訂模型清單..."),
+                   style="Small.TButton", command=self._open_custom_models).pack(anchor="w")
+
+    def _open_custom_models(self):
+        def _on_models_changed(new_id=None):
+            base_ids = [m[0] for m in Sidebar.BASE_MODELS]
+            custom_ids = [m for m in get_custom_models() if m not in base_ids]
+            self.model_combo["values"] = base_ids + custom_ids
+            if new_id:
+                self.model_var.set(new_id)
+        CustomModelsDialog(self, on_change=_on_models_changed)
+
     def _save(self):
         # Save language
         chosen_name = self.lang_combo.get()
@@ -1188,6 +1921,7 @@ class SettingsDialog(tk.Toplevel):
                     content += f"\n{key}={val}\n"
                 if key == "TOKENTABLE_API_KEY":
                     base_url = "https://tokentable.asia/v1"
+                    add_custom_endpoint("TokenTable", base_url, val, "auto")
                     for extra_k, extra_v in [
                         ("CUSTOM_BASE_URL", base_url),
                         ("OPENAI_BASE_URL", base_url),
@@ -1202,6 +1936,10 @@ class SettingsDialog(tk.Toplevel):
                             content += f"\n{extra_k}={extra_v}\n"
                 elif key == "CUSTOM_BASE_URL":
                     val_url = val.rstrip("/")
+                    if val_url and val_url != "https://tokentable.asia/v1":
+                        api_k = self.key_entries.get("OPENAI_API_KEY", None)
+                        k_val = api_k.get().strip() if api_k else ""
+                        add_custom_endpoint("Custom Endpoint", val_url, k_val, "auto")
                     os.environ["OPENAI_BASE_URL"] = val_url
                     p_extra = "^OPENAI_BASE_URL=.*$"
                     r_extra = f"OPENAI_BASE_URL={val_url}"
@@ -1430,6 +2168,7 @@ class HermesGUI:
             on_stream_delta=self._on_stream_delta,
         )
         self._stream_bubble = None  # Active streaming bubble
+        self._thinking_bubble = None  # Active thinking/reasoning bubble
         self._has_streamed = False   # True once any stream delta arrived
 
         self._build_menu()
@@ -1803,7 +2542,9 @@ class HermesGUI:
             self._add_msg(text, "ai")
 
     def _on_tool_call(self, name, preview):
-        # Finalize any in-progress streaming bubble before showing the tool call
+        if self._thinking_bubble:
+            self._thinking_bubble.finalize()
+            self._thinking_bubble = None
         self._cleanup_stream_bubble()
         w = ToolCallWidget(self.msg_frame, name, preview)
         w.pack(fill="x")
@@ -1817,10 +2558,14 @@ class HermesGUI:
         """Append a token to the streaming bubble."""
         if text is None:
             # End-of-turn signal — finalize the current bubble
+            if self._thinking_bubble:
+                self._thinking_bubble.finalize()
             if self._stream_bubble and self._stream_bubble.get_text().strip():
                 self._stream_bubble.finalize()
                 self._stream_bubble = None
             return
+        if self._thinking_bubble:
+            self._thinking_bubble.finalize()
         if self._stream_bubble:
             self._has_streamed = True
             self._stream_bubble.append_text(text)
@@ -1829,6 +2574,8 @@ class HermesGUI:
 
     def _cleanup_stream_bubble(self):
         """Remove or finalize the active streaming bubble."""
+        if self._thinking_bubble:
+            self._thinking_bubble.finalize()
         if self._stream_bubble:
             if self._stream_bubble.get_text().strip():
                 self._stream_bubble.finalize()
@@ -1867,13 +2614,22 @@ class HermesGUI:
         self.bridge.respond_to_approval(approved)
 
     def _on_reasoning(self, text):
-        """Show model's reasoning in the status bar (not as chat bubbles)."""
+        """Show model's reasoning in collapsible thinking box and status bar."""
         if text and text.strip():
-            # Truncate for status bar display
+            if not self._thinking_bubble or getattr(self._thinking_bubble, "_finalized", False):
+                self._cleanup_stream_bubble()
+                self._thinking_bubble = ThinkingBubble(self.msg_frame)
+                self._thinking_bubble.pack(fill="x")
+            self._thinking_bubble.append_reasoning(text)
+            self._scroll_bottom()
+
             preview = text.strip().replace('\n', ' ')[:80]
             self.status_bar.set_thinking(f"Thinking: {preview}")
 
     def _on_complete(self, result):
+        if self._thinking_bubble:
+            self._thinking_bubble.finalize()
+            self._thinking_bubble = None
         self._cleanup_stream_bubble()
         self.status_bar.set_ready()
         # Update token display if available
@@ -1892,6 +2648,8 @@ class HermesGUI:
     # ---- Commands ----
 
     def _new_chat(self):
+        if self._thinking_bubble:
+            self._thinking_bubble = None
         self.bridge.new_session()
         for w in self.msg_frame.winfo_children():
             w.destroy()
@@ -2093,15 +2851,7 @@ class HermesGUI:
             self.status_bar.update_language()
 
     def _about(self):
-        messagebox.showinfo(t("about.title", "About Portable Hermes Agent"),
-                           t("about.text",
-                             "Portable Hermes Agent\n\n"
-                             f"Hermes Agent core v{HERMES_CORE_VERSION}\n\n"
-                             "Portable Windows distribution by aivrar\n"
-                             "Built on Hermes Agent by Nous Research\n\n"
-                             "github.com/aivrar/portable-hermes-agent",
-                             version=HERMES_CORE_VERSION),
-                           parent=self.root)
+        AboutDialog(self.root)
 
     def _on_close(self):
         if self.bridge.is_running:

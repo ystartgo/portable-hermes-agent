@@ -77,6 +77,86 @@ class TestGuiIntegration(unittest.TestCase):
         finally:
             root.destroy()
 
+    def test_custom_models_crud(self):
+        from gui.app import add_custom_model, update_custom_model, remove_custom_model, get_custom_models
+        model_test = "test-model-xyz"
+        model_renamed = "test-model-abc"
+
+        # Add
+        added = add_custom_model(model_test)
+        self.assertTrue(added)
+        self.assertIn(model_test, get_custom_models())
+
+        # Update
+        updated = update_custom_model(model_test, model_renamed)
+        self.assertTrue(updated)
+        self.assertIn(model_renamed, get_custom_models())
+        self.assertNotIn(model_test, get_custom_models())
+
+        # Remove
+        removed = remove_custom_model(model_renamed)
+        self.assertTrue(removed)
+        self.assertNotIn(model_renamed, get_custom_models())
+
+    def test_custom_endpoints_crud(self):
+        from gui.app import (
+            add_custom_endpoint,
+            delete_custom_endpoint,
+            activate_custom_endpoint,
+            get_custom_endpoints,
+        )
+        ep = add_custom_endpoint("Test Endpoint", "https://api.test.com/v1", "sk-test", "auto")
+        self.assertEqual(ep["name"], "Test Endpoint")
+        self.assertEqual(ep["base_url"], "https://api.test.com/v1")
+
+        endpoints = get_custom_endpoints()
+        self.assertTrue(any(e.get("name") == "Test Endpoint" for e in endpoints))
+
+        activated = activate_custom_endpoint(ep)
+        self.assertTrue(activated)
+        self.assertEqual(os.environ.get("OPENAI_BASE_URL"), "https://api.test.com/v1")
+        self.assertEqual(os.environ.get("OPENAI_API_KEY"), "sk-test")
+
+        deleted = delete_custom_endpoint(ep["id"])
+        self.assertTrue(deleted)
+        self.assertFalse(any(e.get("id") == ep["id"] for e in get_custom_endpoints()))
+
+    def test_thinking_bubble_and_tool_call_widgets(self):
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            from gui.app import ThinkingBubble, ToolCallWidget
+            frame = tk.Frame(root)
+            frame.pack()
+
+            # ThinkingBubble
+            tb = ThinkingBubble(frame)
+            tb.pack()
+            self.assertTrue(tb._expanded)
+            tb.append_reasoning("Step 1: analyzing user query.\n")
+            tb.append_reasoning("Step 2: evaluating available tools.\n")
+            self.assertIn("Step 1", tb.get_text())
+
+            # Toggle collapse
+            tb.toggle()
+            self.assertFalse(tb._expanded)
+            tb.toggle()
+            self.assertTrue(tb._expanded)
+            tb.finalize()
+            self.assertTrue(tb._finalized)
+
+            # ToolCallWidget
+            tw = ToolCallWidget(frame, "web_search", "query='Hermes Agent'")
+            tw.pack()
+            self.assertFalse(tw._expanded)
+            tw.toggle()
+            self.assertTrue(tw._expanded)
+            tw.toggle()
+            self.assertFalse(tw._expanded)
+        finally:
+            root.destroy()
+
 
 if __name__ == "__main__":
     unittest.main()
+

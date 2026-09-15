@@ -879,6 +879,13 @@ class APISetupWizard(tk.Toplevel):
                 _save_key_to_env("OPENAI_API_KEY", value)
                 _save_key_to_env("CUSTOM_API_KEY", value)
 
+            try:
+                from gui.app import add_custom_endpoint, activate_custom_endpoint
+                ep = add_custom_endpoint("Custom Endpoint", base_url or "https://api.openai.com/v1", value, "auto")
+                activate_custom_endpoint(ep)
+            except Exception:
+                pass
+
             self.saved_keys[key_name] = True
             self.status_label.configure(text=t("wizard.saved", "已成功儲存！"), fg=C["success"])
             self.after(500, self._next_step)
@@ -905,6 +912,12 @@ class APISetupWizard(tk.Toplevel):
             _save_key_to_env("CUSTOM_BASE_URL", base_url)
             _save_key_to_env("OPENAI_BASE_URL", base_url)
             _save_key_to_env("OPENAI_API_KEY", value)
+            try:
+                from gui.app import add_custom_endpoint, activate_custom_endpoint
+                ep = add_custom_endpoint("TokenTable", base_url, value, "auto")
+                activate_custom_endpoint(ep)
+            except Exception:
+                pass
 
         self.status_label.configure(text=t("wizard.saved", "已成功儲存！"), fg=C["success"])
         self.after(500, self._next_step)

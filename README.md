@@ -19,8 +19,12 @@ Built on [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agen
 ### Desktop GUI
 - Dark-themed Tkinter interface with chat, sidebar, and session management
 - **Full Multi-Language Support**: Real-time switching between Traditional Chinese (繁體中文), Simplified Chinese (簡體中文), and English across all windows, menus, and wizards
+- **Expandable Thinking & Execution Process**: Interactive collapsible cards for model reasoning (`ThinkingBubble`) and detailed tool execution arguments (`ToolCallWidget`) with one-click expand/collapse
+- **Custom Model Management**: Add, edit, and delete custom model identifiers with full persistence via Settings or the sidebar dropdown
+- **Multiple Custom API Endpoints Manager**: Manage multiple OpenAI-compatible providers (TokenTable, Ollama, vLLM, OneAPI, etc.) simultaneously with one-click active switching without configuration loss
 - **Smart API Setup Wizard**: Step-by-step setup supporting **OpenRouter**, **TokenTable** (`https://tokentable.asia/v1`), **Custom Endpoints** (user-defined Base URL & API Key for Ollama, vLLM, LM Studio, or third-party proxies), and web/image tools
-- **Dynamic Model Selection**: Built-in **`auto`** model support (ideal for TokenTable / custom gateway routing) plus one-click custom model additions via Settings or the sidebar dropdown
+- **Dynamic Model Selection**: Built-in **`auto`** model support (ideal for TokenTable / custom gateway routing)
+- **Enhanced About Dialog**: Custom dialog with official MIT license notices and direct clickable hyperlinks to project repositories
 - **Pure Windows CRLF Compatibility**: All launcher batch files (`START.bat`, `UPDATE.bat`, `install.bat`, `hermes.bat`, `hermes_gui.bat`) are strictly CRLF normalized to ensure 100% native `cmd.exe` compatibility
 - Image attachment with thumbnails (vision model support)
 - Guided mode — works offline even without an AI model connected

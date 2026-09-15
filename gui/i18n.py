@@ -195,6 +195,45 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "wizard.get_key": "Get Key",
         "wizard.save_key": "Save Key",
 
+        # Thinking & Execution Process
+        "chat.thinking_process": "Thinking Process",
+        "chat.thinking_active": "Thinking...",
+        "chat.thinking_expand": "Expand ▼",
+        "chat.thinking_collapse": "Collapse ▲",
+        "chat.thinking_finished": "Thinking finished ({count} chars)",
+        "chat.tool_call": "Tool: {name}",
+        "chat.tool_expand": "Details ▼",
+        "chat.tool_collapse": "Collapse ▲",
+        "chat.tool_args": "Arguments / Parameters:",
+
+        # Models Management
+        "models.manage_title": "Manage Custom Models",
+        "models.add": "+ Add Model",
+        "models.edit": "✎ Edit",
+        "models.delete": "🗑 Delete",
+        "models.edit_title": "Edit Model ID",
+        "models.edit_prompt": "Enter new model identifier:",
+        "models.delete_confirm": "Are you sure you want to delete model '{model}'?",
+        "models.empty": "No custom models added yet.",
+        "sidebar.manage_models": "✎ Manage Models...",
+
+        # Custom Endpoints Management
+        "endpoints.title": "Custom API Endpoints",
+        "endpoints.desc": "Manage multiple OpenAI-compatible API providers (TokenTable, Ollama, vLLM, OneAPI, etc.)",
+        "endpoints.add": "+ Add Endpoint",
+        "endpoints.edit": "✎ Edit",
+        "endpoints.delete": "🗑 Delete",
+        "endpoints.activate": "★ Set as Active",
+        "endpoints.active_badge": "[Active]",
+        "endpoints.name": "Name",
+        "endpoints.base_url": "Base URL",
+        "endpoints.api_key": "API Key",
+        "endpoints.model": "Default Model",
+        "endpoints.delete_confirm": "Are you sure you want to delete endpoint '{name}'?",
+        "endpoints.activated_msg": "Endpoint '{name}' is now active.",
+        "endpoints.edit_title": "Endpoint Details",
+        "settings.tab_endpoints": "  API Endpoints  ",
+
         # About Dialog
         "about.title": "About Portable Hermes Agent",
         "about.text": (
@@ -204,6 +243,13 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
             "Built on Hermes Agent by Nous Research\n\n"
             "github.com/aivrar/portable-hermes-agent"
         ),
+        "about.license_title": "License: MIT Open Source License",
+        "about.license_summary": "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction.",
+        "about.repo_link": "GitHub Repository: https://github.com/aivrar/portable-hermes-agent",
+        "about.upstream_link": "Upstream Project: https://github.com/NousResearch/hermes-agent",
+        "about.license_link": "MIT License: https://opensource.org/licenses/MIT",
+        "about.copy_notice": "Copyright (c) 2024-2026 Nous Research & Portable Hermes Contributors",
+        "about.close": "Close",
     },
 
     "zh-hant": {
@@ -376,6 +422,45 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "wizard.get_key": "取得金鑰",
         "wizard.save_key": "儲存金鑰",
 
+        # Thinking & Execution Process
+        "chat.thinking_process": "思考過程",
+        "chat.thinking_active": "思考中...",
+        "chat.thinking_expand": "展開 ▼",
+        "chat.thinking_collapse": "收起 ▲",
+        "chat.thinking_finished": "思考完成（共 {count} 字）",
+        "chat.tool_call": "工具呼叫：{name}",
+        "chat.tool_expand": "詳情 ▼",
+        "chat.tool_collapse": "收起 ▲",
+        "chat.tool_args": "引數與參數：",
+
+        # Models Management
+        "models.manage_title": "管理自訂模型清單",
+        "models.add": "+ 新增模型",
+        "models.edit": "✎ 編輯",
+        "models.delete": "🗑 刪除",
+        "models.edit_title": "編輯模型 ID",
+        "models.edit_prompt": "請輸入新的模型識別碼：",
+        "models.delete_confirm": "確定要刪除模型「{model}」嗎？",
+        "models.empty": "目前尚未新增任何自訂模型。",
+        "sidebar.manage_models": "✎ 管理模型清單...",
+
+        # Custom Endpoints Management
+        "endpoints.title": "自訂 API 端點清單",
+        "endpoints.desc": "管理多個 OpenAI 相容端點（支援 TokenTable、Ollama、vLLM、OneAPI、自訂反向代理等）",
+        "endpoints.add": "+ 新增端點",
+        "endpoints.edit": "✎ 編輯",
+        "endpoints.delete": "🗑 刪除",
+        "endpoints.activate": "★ 設為目前啟用",
+        "endpoints.active_badge": "【目前啟用】",
+        "endpoints.name": "名稱",
+        "endpoints.base_url": "端點網址 (Base URL)",
+        "endpoints.api_key": "金鑰 (API Key)",
+        "endpoints.model": "預設模型",
+        "endpoints.delete_confirm": "確定要刪除端點「{name}」嗎？",
+        "endpoints.activated_msg": "已將端點「{name}」設為目前啟用端點。",
+        "endpoints.edit_title": "端點設定",
+        "settings.tab_endpoints": "  API 端點清單  ",
+
         # About Dialog
         "about.title": "關於便攜版 Hermes Agent",
         "about.text": (
@@ -385,6 +470,13 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
             "基於 Nous Research 的 Hermes Agent 開發\n\n"
             "github.com/aivrar/portable-hermes-agent"
         ),
+        "about.license_title": "開源授權：MIT 授權條款 (MIT License)",
+        "about.license_summary": "本軟體為遵循 MIT 授權條款之自由開源專案，任何人皆可免費取得、使用、修改、合併、發布與分發。",
+        "about.repo_link": "GitHub 專案倉庫：https://github.com/aivrar/portable-hermes-agent",
+        "about.upstream_link": "NousResearch 上游專案：https://github.com/NousResearch/hermes-agent",
+        "about.license_link": "MIT 授權條款：https://opensource.org/licenses/MIT",
+        "about.copy_notice": "Copyright (c) 2024-2026 Nous Research & Portable Hermes Contributors",
+        "about.close": "關閉",
     },
 
     "zh": {
@@ -557,6 +649,45 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "wizard.get_key": "获取密钥",
         "wizard.save_key": "保存密钥",
 
+        # Thinking & Execution Process
+        "chat.thinking_process": "思考过程",
+        "chat.thinking_active": "思考中...",
+        "chat.thinking_expand": "展开 ▼",
+        "chat.thinking_collapse": "收起 ▲",
+        "chat.thinking_finished": "思考完成（共 {count} 字）",
+        "chat.tool_call": "工具调用：{name}",
+        "chat.tool_expand": "详情 ▼",
+        "chat.tool_collapse": "收起 ▲",
+        "chat.tool_args": "参数与输入：",
+
+        # Models Management
+        "models.manage_title": "管理自定义模型列表",
+        "models.add": "+ 新增模型",
+        "models.edit": "✎ 编辑",
+        "models.delete": "🗑 删除",
+        "models.edit_title": "编辑模型 ID",
+        "models.edit_prompt": "请输入新的模型标识：",
+        "models.delete_confirm": "确定要删除模型“{model}”吗？",
+        "models.empty": "目前尚未添加任何自定义模型。",
+        "sidebar.manage_models": "✎ 管理模型列表...",
+
+        # Custom Endpoints Management
+        "endpoints.title": "自定义 API 端点列表",
+        "endpoints.desc": "管理多个 OpenAI 兼容端点（支持 TokenTable、Ollama、vLLM、OneAPI、自定义反向代理等）",
+        "endpoints.add": "+ 新增端点",
+        "endpoints.edit": "✎ 编辑",
+        "endpoints.delete": "🗑 删除",
+        "endpoints.activate": "★ 设为当前启用",
+        "endpoints.active_badge": "【当前启用】",
+        "endpoints.name": "名称",
+        "endpoints.base_url": "端点网址 (Base URL)",
+        "endpoints.api_key": "密钥 (API Key)",
+        "endpoints.model": "默认模型",
+        "endpoints.delete_confirm": "确定要删除端点“{name}”吗？",
+        "endpoints.activated_msg": "已将端点“{name}”设为当前启用端点。",
+        "endpoints.edit_title": "端点配置",
+        "settings.tab_endpoints": "  API 端点列表  ",
+
         # About Dialog
         "about.title": "关于便携版 Hermes Agent",
         "about.text": (
@@ -566,6 +697,13 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
             "基于 Nous Research 的 Hermes Agent 开发\n\n"
             "github.com/aivrar/portable-hermes-agent"
         ),
+        "about.license_title": "开源许可证：MIT 许可证 (MIT License)",
+        "about.license_summary": "本软件为遵循 MIT 许可证的自由开源项目，任何人均可免费获取、使用、修改、合并、发布与分发。",
+        "about.repo_link": "GitHub 项目仓库：https://github.com/aivrar/portable-hermes-agent",
+        "about.upstream_link": "NousResearch 上游项目：https://github.com/NousResearch/hermes-agent",
+        "about.license_link": "MIT 许可证：https://opensource.org/licenses/MIT",
+        "about.copy_notice": "Copyright (c) 2024-2026 Nous Research & Portable Hermes Contributors",
+        "about.close": "关闭",
     },
 }
 

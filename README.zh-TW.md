@@ -19,8 +19,12 @@
 ### 桌面圖形化介面 (GUI)
 - 深色現代風格 Tkinter 介面，內建即時交談、側邊欄與對話紀錄管理
 - **完整多語系介面**：支援 **繁體中文**、**簡體中文** 與 **英文** 即時切換，所有視窗、選單與精靈全面在地化，設定自動保存
-- **智慧型 API 設定精靈**：逐步引導配置 **OpenRouter**、**TokenTable** (`https://tokentable.asia/v1`)、**自訂端點 (Other)**（自由填寫 Base URL 與 API Key，相容 Ollama、vLLM、OneAPI、LM Studio 或各類 OpenAI 相容代理伺服器）及搜尋/圖像工具
-- **動態模型切換與自訂新增**：內建支援 **`auto`** 自動路由模型（特別適用於 TokenTable / 複合模型網關），並可於「設定」或側邊欄直接手動新增自訂模型名稱
+- **思考與執行過程展開檢視**：即時思考推理框（`ThinkingBubble`）與工具呼叫過程框（`ToolCallWidget`）支援一鍵點擊展開與收起，完整呈現參數與思維鏈細節
+- **自訂模型清單管理**：支援自訂模型識別碼的檢視、新增、編輯修改與刪除，並即時同步至側邊欄與設定下拉選單
+- **多組自訂 API 端點管理器**：支援同時管理多組 OpenAI 相容端點（TokenTable、Ollama、vLLM、OneAPI、反向代理等），具備一鍵切換當前啟用端點功能，徹底避免 TokenTable 與自訂端點相互覆蓋
+- **智慧型 API 設定精靈**：逐步引導配置 **OpenRouter**、**TokenTable** (`https://tokentable.asia/v1`)、**自訂端點 (Other)** 及搜尋/圖像工具
+- **動態模型切換**：內建支援 **`auto`** 自動路由模型（特別適用於 TokenTable / 複合模型網關）
+- **全新關於對話框**：標示 MIT 開源授權條款與完整版權聲明，所有專案倉庫與授權網址均可直接點擊開啟瀏覽器
 - **純 Windows CRLF 批次檔相容**：所有啟動批次檔（`START.bat`、`UPDATE.bat`、`install.bat`、`hermes.bat`、`hermes_gui.bat`）皆經由 `.gitattributes` 強制 CRLF 換行，徹底解決原生 `cmd.exe` 在 Linux LF 格式下出現的字元偏移錯誤（如 `'tlocal'`、`'et'`、`'not'` 等指令找不到的報錯）
 - 支援圖片附件與縮圖預覽（完整支援多模態 Vision 模型）
 - 內建引導模式 — 即使尚未連接 AI 模型也能離線使用
