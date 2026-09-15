@@ -457,11 +457,12 @@ class APISetupWizard(tk.Toplevel):
         self.configure(bg=C["bg_main"])
         self.transient(parent)
         self.grab_set()
-        self.resizable(False, False)
+        self.resizable(True, True)
+        self.minsize(620, 620)
         set_dark_title_bar(self)
 
         from gui.theme import center_window
-        center_window(self, 620, 600, parent)
+        center_window(self, 640, 660, parent)
 
         self.current_step = -1
         self.key_entries = {}
@@ -591,17 +592,27 @@ class APISetupWizard(tk.Toplevel):
         step_num = self.current_step + 1
         total = len(self.services)
 
-        # Progress bar
+        # Progress bar (top)
         prog_frame = tk.Frame(self, bg=C["bg_sidebar"], height=4)
-        prog_frame.pack(fill="x")
+        prog_frame.pack(side="top", fill="x")
         prog_frame.pack_propagate(False)
         pct = step_num / total
-        prog_fill = tk.Frame(prog_frame, bg=C["accent"], width=int(620 * pct))
+        prog_fill = tk.Frame(prog_frame, bg=C["accent"], width=int(640 * pct))
         prog_fill.pack(side="left", fill="y")
 
+        # Bottom action buttons (ALWAYS pinned at bottom of window so never cut off)
+        bottom = tk.Frame(self, bg=C["bg_main"])
+        bottom.pack(side="bottom", fill="x", padx=40, pady=(10, 16))
+
+        ttk.Button(bottom, text=t("wizard.save_next", "儲存並前往下一步"), style="Primary.TButton",
+                   command=lambda: self._save_current(svc)).pack(side="right")
+        ttk.Button(bottom, text=t("wizard.skip", "略過"), style="TButton",
+                   command=self._next_step).pack(side="right", padx=(0, 8))
+
+        # Main content area (packed top-to-bottom)
         # Header
         hdr = tk.Frame(self, bg=C["bg_main"])
-        hdr.pack(fill="x", padx=40, pady=(18, 0))
+        hdr.pack(fill="x", padx=40, pady=(14, 0))
 
         step_text = t("wizard.step_progress", "步驟 {step} / {total}", step=step_num, total=total)
         tk.Label(hdr, text=step_text,
@@ -609,9 +620,9 @@ class APISetupWizard(tk.Toplevel):
                 bg=C["bg_main"]).pack(anchor="w")
         tk.Label(hdr, text=f"[{svc['icon']}] {svc['name']}",
                 font=FONTS["heading"], fg=C["accent"],
-                bg=C["bg_main"]).pack(anchor="w", pady=(3, 0))
+                bg=C["bg_main"]).pack(anchor="w", pady=(2, 0))
         tk.Label(hdr, text=svc["what"], font=FONTS["body"],
-                fg=C["text_primary"], bg=C["bg_main"], wraplength=540, justify="left").pack(anchor="w", pady=(3, 0))
+                fg=C["text_primary"], bg=C["bg_main"], wraplength=550, justify="left").pack(anchor="w", pady=(2, 0))
 
         # Unlocks & Free tier
         unlocks_text = t("wizard.unlocks", "解鎖功能：{features}", features=svc["unlocks"])
@@ -623,9 +634,9 @@ class APISetupWizard(tk.Toplevel):
                 bg=C["bg_main"]).pack(anchor="w")
 
         # Steps frame
-        steps_frame = tk.Frame(self, bg=C["bg_card"], padx=16, pady=10,
+        steps_frame = tk.Frame(self, bg=C["bg_card"], padx=14, pady=8,
                               highlightbackground=C["border"], highlightthickness=1)
-        steps_frame.pack(fill="x", padx=40, pady=(12, 0))
+        steps_frame.pack(fill="x", padx=40, pady=(10, 0))
 
         for s_text in svc["steps"]:
             tk.Label(steps_frame, text=s_text, font=FONTS["body"],
@@ -634,40 +645,44 @@ class APISetupWizard(tk.Toplevel):
 
         # Action buttons
         btn_frame = tk.Frame(self, bg=C["bg_main"])
-        btn_frame.pack(fill="x", padx=40, pady=(12, 0))
+        btn_frame.pack(fill="x", padx=40, pady=(10, 0))
 
         rec_url = svc.get("recommend_url") or svc["signup_url"]
         rec_label = svc.get("recommend_label", f"前往申請 {svc['name']} 金鑰")
+        has_two_btns = bool(svc.get("signup_url") and svc.get("signup_url") != rec_url)
+
         rec_btn = ttk.Button(btn_frame, text=f"👉 {rec_label}",
                              style="Primary.TButton",
                              command=lambda u=rec_url: webbrowser.open(u))
-        rec_btn.pack(fill="x", pady=2)
         Tooltip(rec_btn, f"在瀏覽器中開啟 {rec_url}")
 
-        if svc.get("signup_url") and svc.get("signup_url") != rec_url:
+        if has_two_btns:
+            rec_btn.pack(side="left", fill="x", expand=True, padx=(0, 4))
             site_url = svc["signup_url"]
             site_title = t("wizard.official_site", "🌐 {name} 官方網站", name=svc["name"])
             site_btn = ttk.Button(btn_frame, text=site_title,
                                   style="TButton",
                                   command=lambda u=site_url: webbrowser.open(u))
-            site_btn.pack(fill="x", pady=2)
+            site_btn.pack(side="left", fill="x", expand=True, padx=(4, 0))
             Tooltip(site_btn, f"在瀏覽器中開啟 {site_url}")
+        else:
+            rec_btn.pack(fill="x")
 
-        # Base URL display
+        # Base URL display (compact single row)
         if svc.get("base_url"):
             base_frame = tk.Frame(self, bg=C["bg_main"])
-            base_frame.pack(fill="x", padx=40, pady=(8, 0))
+            base_frame.pack(fill="x", padx=40, pady=(6, 0))
             tk.Label(base_frame, text=t("wizard.base_url_label", "API Base URL（已自動配置）："),
                     font=FONTS["small"], fg=C["text_secondary"],
-                    bg=C["bg_main"]).pack(anchor="w")
+                    bg=C["bg_main"]).pack(side="left")
             base_lbl = tk.Label(base_frame, text=svc["base_url"],
                                 font=FONTS["mono_small"], fg=C["accent"],
-                                bg=C["bg_card"], padx=8, pady=3, anchor="w")
-            base_lbl.pack(fill="x", pady=(2, 0))
+                                bg=C["bg_card"], padx=6, pady=2)
+            base_lbl.pack(side="left", padx=(4, 0))
 
         # Key entry
         entry_frame = tk.Frame(self, bg=C["bg_main"])
-        entry_frame.pack(fill="x", padx=40, pady=(10, 0))
+        entry_frame.pack(fill="x", padx=40, pady=(8, 0))
 
         tk.Label(entry_frame, text=t("wizard.paste_label", "請在此處貼上您的金鑰 (API Key)："),
                 font=FONTS["small"], fg=C["text_secondary"],
@@ -677,7 +692,7 @@ class APISetupWizard(tk.Toplevel):
                             bg=C["bg_input"], fg=C["text_primary"],
                             insertbackground=C["text_primary"],
                             relief="flat")
-        key_entry.pack(fill="x", ipady=7, pady=(3, 0))
+        key_entry.pack(fill="x", ipady=6, pady=(3, 0))
 
         current = os.getenv(key_name, "")
         if current:
@@ -686,7 +701,7 @@ class APISetupWizard(tk.Toplevel):
         self.key_entries[key_name] = key_entry
 
         clip_frame = tk.Frame(entry_frame, bg=C["bg_main"])
-        clip_frame.pack(fill="x", pady=(5, 0))
+        clip_frame.pack(fill="x", pady=(4, 0))
 
         ttk.Button(clip_frame, text=t("wizard.paste_clip", "從剪貼簿貼上"),
                    style="Small.TButton",
@@ -698,7 +713,7 @@ class APISetupWizard(tk.Toplevel):
 
         self.status_label = tk.Label(entry_frame, text="", font=FONTS["small"],
                                     bg=C["bg_main"])
-        self.status_label.pack(anchor="w", pady=(3, 0))
+        self.status_label.pack(anchor="w", pady=(2, 0))
 
         try:
             self._clip_snapshot = self.clipboard_get().strip()
@@ -706,14 +721,6 @@ class APISetupWizard(tk.Toplevel):
             self._clip_snapshot = ""
 
         self._poll_clipboard(key_entry, svc)
-
-        bottom = tk.Frame(self, bg=C["bg_main"])
-        bottom.pack(fill="x", padx=40, pady=(16, 0))
-
-        ttk.Button(bottom, text=t("wizard.save_next", "儲存並前往下一步"), style="Primary.TButton",
-                   command=lambda: self._save_current(svc)).pack(side="right")
-        ttk.Button(bottom, text=t("wizard.skip", "略過"), style="TButton",
-                   command=self._next_step).pack(side="right", padx=(0, 8))
 
         key_entry.focus_set()
         key_entry.bind("<Return>", lambda e: self._save_current(svc))
@@ -834,7 +841,7 @@ class APISetupWizard(tk.Toplevel):
                 bg=C["bg_main"], justify="center").pack(pady=(16, 0))
 
         ttk.Button(self, text=t("wizard.start_chatting", "開始對話！"), style="Primary.TButton",
-                   command=self._finish).pack(pady=20)
+                   command=self._finish).pack(side="bottom", pady=(0, 24))
 
     def _finish(self):
         if self.on_complete:
