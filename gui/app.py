@@ -957,10 +957,11 @@ class SettingsDialog(tk.Toplevel):
         self.transient(parent)
         self.grab_set()
         set_dark_title_bar(self)
-        center_window(self, 550, 520, parent)
+        center_window(self, 560, 620, parent)
+        self.resizable(True, True)
 
         tk.Label(self, text=t("settings.title", "Settings"), font=FONTS["title"],
-                fg=C["accent"], bg=C["bg_main"]).pack(pady=(20, 8))
+                fg=C["accent"], bg=C["bg_main"]).pack(pady=(16, 6))
 
         nb = ttk.Notebook(self)
         nb.pack(fill="both", expand=True, padx=16, pady=8)
@@ -1002,6 +1003,8 @@ class SettingsDialog(tk.Toplevel):
         keys = [
             ("OPENROUTER_API_KEY", "OpenRouter (main LLM provider)"),
             ("TOKENTABLE_API_KEY", "TokenTable (AI 大模型聚合平台)"),
+            ("CUSTOM_BASE_URL", "Custom API Base URL (自訂端點網址)"),
+            ("OPENAI_API_KEY", "Custom / OpenAI API Key (自訂端點金鑰)"),
             ("FIRECRAWL_API_KEY", "Firecrawl (web search)"),
             ("FAL_KEY", "FAL.ai (image generation)"),
             ("SERPER_API_KEY", "Serper.dev (Google search)"),
@@ -1011,13 +1014,18 @@ class SettingsDialog(tk.Toplevel):
         self.key_entries = {}
         for key, label in keys:
             tk.Label(parent, text=label, font=FONTS["small"],
-                    fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w", pady=(6, 0))
+                    fg=C["text_secondary"], bg=C["bg_main"]).pack(anchor="w", pady=(4, 0))
+            show_char = "" if "BASE_URL" in key else "*"
             ent = tk.Entry(parent, font=FONTS["mono_small"],
                           bg=C["bg_input"], fg=C["text_primary"],
                           insertbackground=C["text_primary"],
-                          relief="flat", show="*")
-            ent.pack(fill="x", ipady=4)
+                          relief="flat", show=show_char)
+            ent.pack(fill="x", ipady=3)
             cur = os.getenv(key, "")
+            if not cur and key == "CUSTOM_BASE_URL":
+                cur = os.getenv("OPENAI_BASE_URL", "")
+            if not cur and key == "OPENAI_API_KEY":
+                cur = os.getenv("CUSTOM_API_KEY", "")
             if cur:
                 ent.insert(0, cur)
             self.key_entries[key] = ent
@@ -1080,6 +1088,23 @@ class SettingsDialog(tk.Toplevel):
                             content = re.sub(p_extra, r_extra, content, flags=re.MULTILINE)
                         else:
                             content += f"\n{extra_k}={extra_v}\n"
+                elif key == "CUSTOM_BASE_URL":
+                    val_url = val.rstrip("/")
+                    os.environ["OPENAI_BASE_URL"] = val_url
+                    p_extra = "^OPENAI_BASE_URL=.*$"
+                    r_extra = f"OPENAI_BASE_URL={val_url}"
+                    if re.search(p_extra, content, re.MULTILINE):
+                        content = re.sub(p_extra, r_extra, content, flags=re.MULTILINE)
+                    else:
+                        content += f"\nOPENAI_BASE_URL={val_url}\n"
+                elif key == "OPENAI_API_KEY":
+                    os.environ["CUSTOM_API_KEY"] = val
+                    p_extra = "^CUSTOM_API_KEY=.*$"
+                    r_extra = f"CUSTOM_API_KEY={val}"
+                    if re.search(p_extra, content, re.MULTILINE):
+                        content = re.sub(p_extra, r_extra, content, flags=re.MULTILINE)
+                    else:
+                        content += f"\nCUSTOM_API_KEY={val}\n"
         model = self.model_var.get().strip()
         if model:
             self.bridge.set_model(model)

@@ -72,6 +72,22 @@ def get_api_services():
                 "prefix": "sk-",
             },
             {
+                "key": "CUSTOM_API",
+                "name": "其它 (自訂端點)",
+                "icon": "LLM",
+                "is_custom": True,
+                "what": "自訂 OpenAI 相容 API 端點 — 支援任何中轉站、本地模型（Ollama、vLLM、LM Studio）或自建伺服器。",
+                "unlocks": "自訂模型對話、私有大模型、第三方 API 代理通道",
+                "steps": [
+                    "1. 在下方輸入您的 API Base URL（例如：https://api.openai.com/v1 或 http://localhost:11434/v1）",
+                    "2. 在下方輸入您的 API Key（若為本地無密碼模型可填入任意文字或略過）",
+                    "3. 點擊「儲存並前往下一步」，系統將自動設定 OPENAI_BASE_URL 與 OPENAI_API_KEY",
+                ],
+                "free_tier": "相容所有遵循 OpenAI API 規範之伺服器與中轉通道",
+                "required": False,
+                "prefix": "",
+            },
+            {
                 "key": "FIRECRAWL_API_KEY",
                 "name": "Firecrawl",
                 "icon": "WEB",
@@ -193,6 +209,22 @@ def get_api_services():
                 "free_tier": "API 端点服务器：https://tokentable.asia/v1",
                 "required": False,
                 "prefix": "sk-",
+            },
+            {
+                "key": "CUSTOM_API",
+                "name": "其它 (自订端点)",
+                "icon": "LLM",
+                "is_custom": True,
+                "what": "自订 OpenAI 兼容 API 端点 — 支持任何中转站、本地模型（Ollama、vLLM、LM Studio）或自建服务器。",
+                "unlocks": "自定义模型对话、私有大模型、第三方 API 代理通道",
+                "steps": [
+                    "1. 在下方输入您的 API Base URL（例如：https://api.openai.com/v1 或 http://localhost:11434/v1）",
+                    "2. 在下方输入您的 API Key（若为本地无密码模型可填入任意字符或略过）",
+                    "3. 点击「保存并前往下一步」，系统将自动配置 OPENAI_BASE_URL 与 OPENAI_API_KEY",
+                ],
+                "free_tier": "兼容所有遵循 OpenAI API 规范之服务器与中转通道",
+                "required": False,
+                "prefix": "",
             },
             {
                 "key": "FIRECRAWL_API_KEY",
@@ -318,6 +350,22 @@ def get_api_services():
                 "prefix": "sk-",
             },
             {
+                "key": "CUSTOM_API",
+                "name": "Other (Custom Endpoint)",
+                "icon": "LLM",
+                "is_custom": True,
+                "what": "Custom OpenAI-compatible API endpoint — connect to Ollama, vLLM, LM Studio, self-hosted servers, or third-party proxies.",
+                "unlocks": "Custom model chat, local private LLMs, third-party API gateways",
+                "steps": [
+                    "1. Enter your API Base URL below (e.g. https://api.openai.com/v1 or http://localhost:11434/v1)",
+                    "2. Enter your API Key below (can be any string for keyless local models)",
+                    "3. Click 'Save & Next' — system will auto-configure OPENAI_BASE_URL and OPENAI_API_KEY",
+                ],
+                "free_tier": "Compatible with all OpenAI-compatible endpoints",
+                "required": False,
+                "prefix": "",
+            },
+            {
                 "key": "FIRECRAWL_API_KEY",
                 "name": "Firecrawl",
                 "icon": "WEB",
@@ -424,19 +472,31 @@ def get_missing_keys():
     has_llm = bool(
         os.getenv("OPENROUTER_API_KEY")
         or os.getenv("TOKENTABLE_API_KEY")
+        or os.getenv("CUSTOM_API_KEY")
         or os.getenv("OPENAI_API_KEY")
+        or os.getenv("OPENAI_BASE_URL")
     )
     for svc in get_api_services():
         if svc["icon"] == "LLM" and has_llm:
             continue
-        if not os.getenv(svc["key"]):
+        if svc.get("is_custom"):
+            has_this = bool(os.getenv("CUSTOM_API_KEY") or (os.getenv("OPENAI_BASE_URL") and os.getenv("OPENAI_API_KEY")))
+        else:
+            has_this = bool(os.getenv(svc["key"]))
+        if not has_this:
             missing.append(svc)
     return missing
 
 
 def get_key_status():
     """Return dict of key -> bool for all services."""
-    return {svc["key"]: bool(os.getenv(svc["key"])) for svc in get_api_services()}
+    res = {}
+    for svc in get_api_services():
+        if svc.get("is_custom"):
+            res[svc["key"]] = bool(os.getenv("CUSTOM_API_KEY") or (os.getenv("OPENAI_BASE_URL") and os.getenv("OPENAI_API_KEY")))
+        else:
+            res[svc["key"]] = bool(os.getenv(svc["key"]))
+    return res
 
 
 # ============================================================================
@@ -513,12 +573,17 @@ class APISetupWizard(tk.Toplevel):
         has_llm = bool(
             os.getenv("OPENROUTER_API_KEY")
             or os.getenv("TOKENTABLE_API_KEY")
+            or os.getenv("CUSTOM_API_KEY")
             or os.getenv("OPENAI_API_KEY")
+            or os.getenv("OPENAI_BASE_URL")
         )
 
         all_services = get_api_services()
         for svc in all_services:
-            has_key = bool(os.getenv(svc["key"]))
+            if svc.get("is_custom"):
+                has_key = bool(os.getenv("CUSTOM_API_KEY") or (os.getenv("OPENAI_BASE_URL") and os.getenv("OPENAI_API_KEY")))
+            else:
+                has_key = bool(os.getenv(svc["key"]))
             is_llm = (svc.get("icon") == "LLM")
 
             if has_key:
@@ -644,20 +709,38 @@ class APISetupWizard(tk.Toplevel):
                     anchor="w", justify="left").pack(fill="x", pady=1)
 
         # Action buttons
-        btn_frame = tk.Frame(self, bg=C["bg_main"])
-        btn_frame.pack(fill="x", padx=40, pady=(10, 0))
+        rec_url = svc.get("recommend_url") or svc.get("signup_url")
+        if rec_url:
+            btn_frame = tk.Frame(self, bg=C["bg_main"])
+            btn_frame.pack(fill="x", padx=40, pady=(10, 0))
 
-        rec_url = svc.get("recommend_url") or svc["signup_url"]
-        rec_label = svc.get("recommend_label", f"前往申請 {svc['name']} 金鑰")
+            rec_label = svc.get("recommend_label", f"前往申請 {svc['name']} 金鑰")
+            rec_btn = ttk.Button(btn_frame, text=f"👉 {rec_label}",
+                                 style="Primary.TButton",
+                                 command=lambda u=rec_url: webbrowser.open(u))
+            rec_btn.pack(fill="x")
+            Tooltip(rec_btn, f"在瀏覽器中開啟 {rec_url}")
 
-        rec_btn = ttk.Button(btn_frame, text=f"👉 {rec_label}",
-                             style="Primary.TButton",
-                             command=lambda u=rec_url: webbrowser.open(u))
-        rec_btn.pack(fill="x")
-        Tooltip(rec_btn, f"在瀏覽器中開啟 {rec_url}")
-
-        # Base URL display (compact single row)
-        if svc.get("base_url"):
+        # Base URL input or display
+        if svc.get("is_custom"):
+            url_frame = tk.Frame(self, bg=C["bg_main"])
+            url_frame.pack(fill="x", padx=40, pady=(8, 0))
+            tk.Label(url_frame, text=t("wizard.custom_url_label", "API Base URL（伺服器端點網址）："),
+                    font=FONTS["small"], fg=C["text_secondary"],
+                    bg=C["bg_main"]).pack(anchor="w")
+            self.base_url_entry = tk.Entry(url_frame, font=FONTS["mono_small"],
+                                           bg=C["bg_input"], fg=C["text_primary"],
+                                           insertbackground=C["text_primary"],
+                                           relief="flat")
+            self.base_url_entry.pack(fill="x", ipady=5, pady=(2, 0))
+            cur_base = os.getenv("CUSTOM_BASE_URL") or os.getenv("OPENAI_BASE_URL") or ""
+            if cur_base:
+                self.base_url_entry.insert(0, cur_base)
+            tk.Label(url_frame,
+                     text=t("wizard.custom_url_hint", "例如：https://api.openai.com/v1 或 http://localhost:11434/v1"),
+                     font=SF("Segoe UI", 8), fg=C["text_hint"],
+                     bg=C["bg_main"]).pack(anchor="w", pady=(1, 0))
+        elif svc.get("base_url"):
             base_frame = tk.Frame(self, bg=C["bg_main"])
             base_frame.pack(fill="x", padx=40, pady=(6, 0))
             tk.Label(base_frame, text=t("wizard.base_url_label", "API Base URL（已自動配置）："),
@@ -672,7 +755,12 @@ class APISetupWizard(tk.Toplevel):
         entry_frame = tk.Frame(self, bg=C["bg_main"])
         entry_frame.pack(fill="x", padx=40, pady=(8, 0))
 
-        tk.Label(entry_frame, text=t("wizard.paste_label", "請在此處貼上您的金鑰 (API Key)："),
+        if svc.get("is_custom"):
+            lbl_text = t("wizard.custom_key_label", "API Key（金鑰，若本地無密碼可填隨意字元）：")
+        else:
+            lbl_text = t("wizard.paste_label", "請在此處貼上您的金鑰 (API Key)：")
+
+        tk.Label(entry_frame, text=lbl_text,
                 font=FONTS["small"], fg=C["text_secondary"],
                 bg=C["bg_main"]).pack(anchor="w")
 
@@ -682,7 +770,10 @@ class APISetupWizard(tk.Toplevel):
                             relief="flat")
         key_entry.pack(fill="x", ipady=6, pady=(3, 0))
 
-        current = os.getenv(key_name, "")
+        if svc.get("is_custom"):
+            current = os.getenv("CUSTOM_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+        else:
+            current = os.getenv(key_name, "")
         if current:
             key_entry.insert(0, current)
 
@@ -710,7 +801,12 @@ class APISetupWizard(tk.Toplevel):
 
         self._poll_clipboard(key_entry, svc)
 
-        key_entry.focus_set()
+        if svc.get("is_custom") and hasattr(self, "base_url_entry") and not self.base_url_entry.get().strip():
+            self.base_url_entry.focus_set()
+            self.base_url_entry.bind("<Return>", lambda e: key_entry.focus_set())
+        else:
+            key_entry.focus_set()
+
         key_entry.bind("<Return>", lambda e: self._save_current(svc))
 
     def _paste_from_clipboard(self, entry):
@@ -731,6 +827,9 @@ class APISetupWizard(tk.Toplevel):
             clip = ""
 
         if clip and clip != self._clip_snapshot:
+            if clip.startswith("http://") or clip.startswith("https://"):
+                return
+
             current = entry.get().strip()
             prefix = svc.get("prefix", "")
             is_key = False
@@ -758,6 +857,31 @@ class APISetupWizard(tk.Toplevel):
         entry = self.key_entries.get(key_name)
         if not entry:
             self._next_step()
+            return
+
+        if svc.get("is_custom"):
+            base_url = ""
+            if hasattr(self, "base_url_entry") and self.base_url_entry.winfo_exists():
+                base_url = self.base_url_entry.get().strip()
+            value = entry.get().strip()
+
+            if not base_url and not value:
+                self.status_label.configure(text=t("wizard.no_setting", "未輸入任何設定 — 已略過。"),
+                                           fg=C["warning_dark"])
+                self.after(1000, self._next_step)
+                return
+
+            if base_url:
+                base_url = base_url.rstrip("/")
+                _save_key_to_env("CUSTOM_BASE_URL", base_url)
+                _save_key_to_env("OPENAI_BASE_URL", base_url)
+            if value:
+                _save_key_to_env("OPENAI_API_KEY", value)
+                _save_key_to_env("CUSTOM_API_KEY", value)
+
+            self.saved_keys[key_name] = True
+            self.status_label.configure(text=t("wizard.saved", "已成功儲存！"), fg=C["success"])
+            self.after(500, self._next_step)
             return
 
         value = entry.get().strip()
@@ -810,7 +934,10 @@ class APISetupWizard(tk.Toplevel):
             row = tk.Frame(status_frame, bg=C["bg_main"])
             row.pack(fill="x", pady=2)
 
-            has_key = bool(os.getenv(svc["key"]))
+            if svc.get("is_custom"):
+                has_key = bool(os.getenv("CUSTOM_API_KEY") or (os.getenv("OPENAI_BASE_URL") and os.getenv("OPENAI_API_KEY")))
+            else:
+                has_key = bool(os.getenv(svc["key"]))
             dot_color = C["success"] if has_key else C["text_disabled"]
             status_text = t("wizard.status_ready", "已就緒") if has_key else t("wizard.status_not_set", "未設定")
 
