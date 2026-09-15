@@ -18,10 +18,12 @@ Built on [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agen
 
 ### Desktop GUI
 - Dark-themed Tkinter interface with chat, sidebar, and session management
-- Multi-language UI support with real-time switching: Traditional Chinese (繁體中文), Simplified Chinese (簡體中文), and English
+- **Full Multi-Language Support**: Real-time switching between Traditional Chinese (繁體中文), Simplified Chinese (簡體中文), and English across all windows, menus, and wizards
+- **Smart API Setup Wizard**: Step-by-step setup supporting **OpenRouter**, **TokenTable** (`https://tokentable.asia/v1`), **Custom Endpoints** (user-defined Base URL & API Key for Ollama, vLLM, LM Studio, or third-party proxies), and web/image tools
+- **Dynamic Model Selection**: Built-in **`auto`** model support (ideal for TokenTable / custom gateway routing) plus one-click custom model additions via Settings or the sidebar dropdown
+- **Pure Windows CRLF Compatibility**: All launcher batch files (`START.bat`, `UPDATE.bat`, `install.bat`, `hermes.bat`, `hermes_gui.bat`) are strictly CRLF normalized to ensure 100% native `cmd.exe` compatibility
 - Image attachment with thumbnails (vision model support)
-- Guided mode — works even without an AI model connected
-- API key setup wizard with individual service configuration
+- Guided mode — works offline even without an AI model connected
 - Permissions panel with granular control over file, network, and system access
 
 ### 100 Tools Across 20+ Toolsets
@@ -143,17 +145,29 @@ See **[Keeping Portable Hermes Updated](https://github.com/aivrar/portable-herme
 
 ### 4. Connect an AI Model
 
-**Cloud (2 minutes, free):**
-1. File > API Key Setup > OpenRouter
-2. Sign up at openrouter.ai (free, no credit card)
-3. Paste your API key
-4. Start chatting
+Open the **API Key Setup Wizard** via **File > API Key Setup**:
 
-**Local (needs NVIDIA GPU):**
-1. Download [LM Studio](https://lmstudio.ai)
-2. Download a model, start the server
-3. Tools > LM Studio in the GUI
-4. Load model, click "Use for Chat"
+- **TokenTable (High-speed Asia / Global Gateway):**
+  1. Select **TokenTable** in the Setup Wizard.
+  2. Click **Apply / Get Token** (directs to [top.yia.app/token](https://top.yia.app/token)) to get your API key.
+  3. Paste your key (API Base URL automatically sets to `https://tokentable.asia/v1`).
+  4. Select or type **`auto`** in the model dropdown to leverage intelligent routing.
+
+- **OpenRouter (Cloud & Free Tier Models):**
+  1. Select **OpenRouter** in the Setup Wizard.
+  2. Click **Apply / Get Token** to register at [openrouter.ai](https://openrouter.ai).
+  3. Paste your API key and pick any model (or Hermes default).
+
+- **Other (Custom Endpoint — Ollama, vLLM, OneAPI, Private Proxy):**
+  1. Select **Other (Custom Endpoint)** in the Setup Wizard.
+  2. Enter your custom **API Base URL** (e.g. `http://localhost:11434/v1`) and **API Key**.
+  3. Enter your custom model name (or use the sidebar `+ Custom Model...` option).
+
+- **Local AI (LM Studio, requires NVIDIA GPU):**
+  1. Download [LM Studio](https://lmstudio.ai).
+  2. Download a model and start the local server.
+  3. Go to **Tools > LM Studio** in the GUI.
+  4. Load your model and click "Use for Chat".
 
 ---
 

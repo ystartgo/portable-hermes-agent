@@ -18,10 +18,12 @@
 
 ### 桌面圖形化介面 (GUI)
 - 深色現代風格 Tkinter 介面，內建即時交談、側邊欄與對話紀錄管理
-- **多語系介面支援**：支援 **繁體中文**、**簡體中文** 與 **英文** 即時切換，設定自動保存
+- **完整多語系介面**：支援 **繁體中文**、**簡體中文** 與 **英文** 即時切換，所有視窗、選單與精靈全面在地化，設定自動保存
+- **智慧型 API 設定精靈**：逐步引導配置 **OpenRouter**、**TokenTable** (`https://tokentable.asia/v1`)、**自訂端點 (Other)**（自由填寫 Base URL 與 API Key，相容 Ollama、vLLM、OneAPI、LM Studio 或各類 OpenAI 相容代理伺服器）及搜尋/圖像工具
+- **動態模型切換與自訂新增**：內建支援 **`auto`** 自動路由模型（特別適用於 TokenTable / 複合模型網關），並可於「設定」或側邊欄直接手動新增自訂模型名稱
+- **純 Windows CRLF 批次檔相容**：所有啟動批次檔（`START.bat`、`UPDATE.bat`、`install.bat`、`hermes.bat`、`hermes_gui.bat`）皆經由 `.gitattributes` 強制 CRLF 換行，徹底解決原生 `cmd.exe` 在 Linux LF 格式下出現的字元偏移錯誤（如 `'tlocal'`、`'et'`、`'not'` 等指令找不到的報錯）
 - 支援圖片附件與縮圖預覽（完整支援多模態 Vision 模型）
 - 內建引導模式 — 即使尚未連接 AI 模型也能離線使用
-- API 金鑰設定精靈，一步步引導各服務設定
 - 細部權限管理面板，精確控制檔案、網路與系統存取權限
 
 ### 跨 20+ 工具集的 100 種強大工具
@@ -112,17 +114,29 @@ hermes.bat          :: CLI 終端模式
 
 ### 4. 連接 AI 模型
 
-**雲端模型（免費，約 2 分鐘）：**
-1. 點選「檔案 > API 金鑰設定 > OpenRouter」
-2. 於 openrouter.ai 免費註冊（無需信用卡）
-3. 貼上您的 API 金鑰
-4. 立即開始交談！
+開啟上方選單之 **「檔案 > API 金鑰設定」** 智慧精靈：
 
-**本地模型（需 NVIDIA 獨立顯卡）：**
-1. 下載並安裝 [LM Studio](https://lmstudio.ai)
-2. 下載模型並啟動本地 Server
-3. 在介面選單點選「檢視 > LM Studio (本地模型)」
-4. 載入模型並點擊「用於對話 (Use for Chat)」
+- **TokenTable（亞太與全球高速中轉，推薦）：**
+  1. 於精靈中選取 **TokenTable**
+  2. 點選 **「推薦申請 / 取得 Key」**（自動導向至 [top.yia.app/token](https://top.yia.app/token)）快速獲取金鑰
+  3. 貼上您的 API 金鑰（API Base URL 預設已為 `https://tokentable.asia/v1`）
+  4. 於模型清單選取或輸入 **`auto`**（智慧自動路由），即可開始高速交談！
+
+- **OpenRouter（雲端與免費模型）：**
+  1. 於精靈中選取 **OpenRouter**
+  2. 點選 **「推薦申請 / 取得 Key」** 前往 [openrouter.ai](https://openrouter.ai) 註冊（免信用卡）
+  3. 貼上您的 API 金鑰並選擇喜好的模型
+
+- **其它自訂端點（Other - 相容 Ollama / vLLM / OneAPI / 私有代理）：**
+  1. 於精靈中選取 **其它 (自訂端點)**
+  2. 輸入您的自訂 **API Base URL**（例如 `http://localhost:11434/v1`）與 **API Key**
+  3. 輸入自訂模型名稱（亦可隨時在側邊欄模型清單點選「+ 自訂模型...」快速手動新增）
+
+- **本地模型（LM Studio，需 NVIDIA 獨立顯卡）：**
+  1. 下載並安裝 [LM Studio](https://lmstudio.ai)
+  2. 下載模型並啟動本地 Server
+  3. 在介面選單點選「檢視 > LM Studio (本地模型)」
+  4. 載入模型並點擊「用於對話 (Use for Chat)」
 
 ---
 

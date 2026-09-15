@@ -18,10 +18,12 @@
 
 ### 桌面图形界面 (GUI)
 - 深色现代风格 Tkinter 界面，内置实时聊天、侧边栏与会话记录管理
-- **多语言界面支持**：支持 **繁体中文**、**简体中文** 与 **英文** 实时切换，配置自动保存
+- **完整多语言界面**：支持 **繁体中文**、**简体中文** 与 **英文** 实时切换，所有窗口、菜单与向导全面本地化，配置自动保存
+- **智能 API 设置向导**：逐步引导配置 **OpenRouter**、**TokenTable** (`https://tokentable.asia/v1`)、**自定义端点 (Other)**（自由填写 Base URL 与 API Key，兼容 Ollama、vLLM、OneAPI、LM Studio 或各类 OpenAI 兼容代理服务器）及搜索/图像工具
+- **动态模型切换与自定义新增**：内置支持 **`auto`** 自动路由模型（特别适用于 TokenTable / 复合模型网关），并可在“设置”或侧边栏直接手动新增自定义模型名称
+- **纯 Windows CRLF 批处理兼容**：所有启动批处理文件（`START.bat`、`UPDATE.bat`、`install.bat`、`hermes.bat`、`hermes_gui.bat`）均由 `.gitattributes` 强制规范 CRLF 换行，彻底解决原生 `cmd.exe` 在 Linux LF 格式下出现的字符偏移错误（如 `'tlocal'`、`'et'`、`'not'` 等命令找不到的报错）
 - 支持图片附件与缩略图预览（完整支持多模态 Vision 模型）
 - 内置引导模式 — 即使尚未连接 AI 模型也可离线使用
-- API 密钥设置向导，一步步引导各服务配置
 - 细粒度权限管理面板，精确控制文件、网络与系统访问权限
 
 ### 跨 20+ 工具集的 100 种强大工具
@@ -112,17 +114,29 @@ hermes.bat          :: CLI 终端模式
 
 ### 4. 连接 AI 模型
 
-**云端模型（免费，约 2 分钟）：**
-1. 点击“文件 > API 密钥设置 > OpenRouter”
-2. 在 openrouter.ai 免费注册（无需信用卡）
-3. 粘贴您的 API 密钥
-4. 立即开始对话！
+打开上方菜单之 **“文件 > API 密钥设置”** 智能向导：
 
-**本地模型（需 NVIDIA 独立显卡）：**
-1. 下载并安装 [LM Studio](https://lmstudio.ai)
-2. 下载模型并启动本地 Server
-3. 在界面菜单点击“视图 > LM Studio (本地模型)”
-4. 加载模型并点击“用于对话 (Use for Chat)”
+- **TokenTable（亚太与全球高速中转，推荐）：**
+  1. 在向导中选择 **TokenTable**
+  2. 点击 **“推荐申请 / 获取 Key”**（自动跳转至 [top.yia.app/token](https://top.yia.app/token)）快速获取密钥
+  3. 粘贴您的 API 密钥（API Base URL 默认已为 `https://tokentable.asia/v1`）
+  4. 在模型列表选取或输入 **`auto`**（智能自动路由），即可开始高速对话！
+
+- **OpenRouter（云端与免费模型）：**
+  1. 在向导中选择 **OpenRouter**
+  2. 点击 **“推荐申请 / 获取 Key”** 前往 [openrouter.ai](https://openrouter.ai) 注册（免信用卡）
+  3. 粘贴您的 API 密钥并选择喜欢的模型
+
+- **其它自定义端点（Other - 兼容 Ollama / vLLM / OneAPI / 私有代理）：**
+  1. 在向导中选择 **其它 (自定义端点)**
+  2. 输入您的自定义 **API Base URL**（例如 `http://localhost:11434/v1`）与 **API Key**
+  3. 输入自定义模型名称（亦可随时在侧边栏模型列表点击“+ 自定义模型...”快速手动新增）
+
+- **本地模型（LM Studio，需 NVIDIA 独立显卡）：**
+  1. 下载并安装 [LM Studio](https://lmstudio.ai)
+  2. 下载模型并启动本地 Server
+  3. 在界面菜单点击“视图 > LM Studio (本地模型)”
+  4. 加载模型并点击“用于对话 (Use for Chat)”
 
 ---
 
